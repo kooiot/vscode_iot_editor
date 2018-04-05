@@ -4,23 +4,108 @@
     "description": "IOT Editor for building application",
     "version": "0.0.1",
     "publisher": "kooiot",
+    "author": {
+        "name": "Dirk Chang",
+        "email": "dirk@kooiot.com"
+    },
+    "license": "MIT",
     "engines": {
         "vscode": "^1.21.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kooiot/vscode_iot_editor.git"
     },
     "categories": [
         "Other"
     ],
     "activationEvents": [
-        "onCommand:extension.sayHello"
+        "*"
     ],
-    "main": "./out/extension",
+    "main": "./out/iot_editor",
     "contributes": {
+        "configuration": {
+            "type": "object",
+            "title": "IOT Editor configuration",
+            "properties": {
+                "iot_editor.online": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Complete functions with their parameter signature."
+                },
+                "iot_editor.device": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Specifies iot device IP/SN to use."
+                },
+                "iot_editor.application": {
+                    "type": ["string", "null"],
+                    "default": null,
+                    "description": "Specifies iot device IP/SN to use."
+                }
+            }
+        },
         "commands": [
             {
-                "command": "extension.sayHello",
-                "title": "Hello World"
+                "command": "iot_editor.configurationSelect",
+                "title": "Select a Configuration...",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.configurationEdit",
+                "title": "Edit Configurations...",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.applicationDownload",
+                "title": "Download application...",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.applicationUpload",
+                "title": "Upload application...",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.applicationStart",
+                "title": "Start application...",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.applicationStop",
+                "title": "Stop application...",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.fileDownload",
+                "title": "Download file...",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.fileUpload",
+                "title": "Upload file...",
+                "category": "IOT"
             }
-        ]
+        ],
+        "menus": {
+            "commandPalette": [
+                
+            ],
+            "editor/title": [
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.fileDownload",
+                    "alt": "iot_editor.applicationDownload",
+                    "group": "navigation"
+                },
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.fileUpload",
+                    "alt": "iot_editor.applicationUpload",
+                    "group": "navigation"
+                }
+            ]
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",
@@ -35,5 +120,9 @@
         "tslint": "^5.8.0",
         "@types/node": "^7.0.43",
         "@types/mocha": "^2.2.42"
+    },
+    "dependencies": {
+        "encodeurl": "^1.0.1",
+        "requests": "^2.81.0"
     }
 }

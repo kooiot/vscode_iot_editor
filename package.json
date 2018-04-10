@@ -17,91 +17,167 @@
         "url": "https://github.com/kooiot/vscode_iot_editor.git"
     },
     "categories": [
-        "Other"
+        "Language Packs"
     ],
     "activationEvents": [
-        "*"
+        "onCommand:iot_editor.configurationEdit",
+        "workspaceContains:**/iot_editor_properties.json"
     ],
-    "main": "./out/iot_editor",
+    "main": "./out/extension",
     "contributes": {
         "configuration": {
             "type": "object",
             "title": "IOT Editor configuration",
             "properties": {
+                "iot_editor.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "IOT Editor is enabled."
+                },
                 "iot_editor.online": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Complete functions with their parameter signature."
-                },
-                "iot_editor.device": {
-                    "type": ["string", "null"],
-                    "default": null,
-                    "description": "Specifies iot device IP/SN to use."
-                },
-                "iot_editor.application": {
-                    "type": ["string", "null"],
-                    "default": null,
-                    "description": "Specifies iot device IP/SN to use."
+                    "description": "Device is connected."
                 }
             }
         },
         "commands": [
             {
+                "command": "iot_editor.aboutEditor",
+                "title": "About IOT Editor...",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.connect",
+                "title": "Connect to device",
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/connect.svg",
+                    "dark": "./media/icon/connect_inverse.svg"
+                }
+            },
+            {
                 "command": "iot_editor.configurationSelect",
                 "title": "Select a Configuration...",
-                "category": "IOT"
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/download.svg",
+                    "dark": "./media/icon/download_inverse.svg"
+                }
             },
             {
                 "command": "iot_editor.configurationEdit",
                 "title": "Edit Configurations...",
-                "category": "IOT"
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/download.svg",
+                    "dark": "./media/icon/download_inverse.svg"
+                }
             },
             {
                 "command": "iot_editor.applicationDownload",
                 "title": "Download application...",
-                "category": "IOT"
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/download.svg",
+                    "dark": "./media/icon/download_inverse.svg"
+                }
             },
             {
                 "command": "iot_editor.applicationUpload",
                 "title": "Upload application...",
-                "category": "IOT"
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/upload.svg",
+                    "dark": "./media/icon/upload_inverse.svg"
+                }
             },
             {
                 "command": "iot_editor.applicationStart",
                 "title": "Start application...",
-                "category": "IOT"
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/download.svg",
+                    "dark": "./media/icon/download_inverse.svg"
+                }
             },
             {
                 "command": "iot_editor.applicationStop",
                 "title": "Stop application...",
-                "category": "IOT"
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/download.svg",
+                    "dark": "./media/icon/download_inverse.svg"
+                }
             },
             {
                 "command": "iot_editor.fileDownload",
                 "title": "Download file...",
-                "category": "IOT"
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/download.svg",
+                    "dark": "./media/icon/download_inverse.svg"
+                }
             },
             {
                 "command": "iot_editor.fileUpload",
                 "title": "Upload file...",
-                "category": "IOT"
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/upload.svg",
+                    "dark": "./media/icon/upload_inverse.svg"
+                }
             }
         ],
         "menus": {
             "commandPalette": [
-                
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.applicationDownload"
+                },
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.applicationUpload"
+                },
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.applicationStart"
+                },
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.applicationStop"
+                },
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.fileDownload"
+                },
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.fileUpload"
+                },
+                {
+                    "when": "config.iot_editor.enabled && config.iot_editor.online == false",
+                    "command": "iot_editor.connect"
+                },
+                {
+                    "when": "config.iot_editor.enabled",
+                    "command": "iot_editor.configurationSelect"
+                }
             ],
             "editor/title": [
                 {
                     "when": "config.iot_editor.online == true",
                     "command": "iot_editor.fileDownload",
-                    "alt": "iot_editor.applicationDownload",
                     "group": "navigation"
                 },
                 {
                     "when": "config.iot_editor.online == true",
                     "command": "iot_editor.fileUpload",
-                    "alt": "iot_editor.applicationUpload",
+                    "group": "navigation"
+                },
+                {
+                    "when": "config.iot_editor.enabled && config.iot_editor.online == false",
+                    "command": "iot_editor.connect",
                     "group": "navigation"
                 }
             ]
@@ -115,14 +191,13 @@
         "test": "npm run compile && node ./node_modules/vscode/bin/test"
     },
     "devDependencies": {
-        "typescript": "^2.6.1",
-        "vscode": "^1.1.6",
-        "tslint": "^5.8.0",
+        "@types/mocha": "^2.2.42",
         "@types/node": "^7.0.43",
-        "@types/mocha": "^2.2.42"
+        "tslint": "^5.8.0",
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6"
     },
     "dependencies": {
-        "encodeurl": "^1.0.1",
-        "requests": "^2.81.0"
+        "@types/request": "^2.47.0"
     }
 }

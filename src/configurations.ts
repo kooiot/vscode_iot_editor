@@ -15,17 +15,11 @@ let defaultSettings: string = `{
             "name": "Device",
             "device": {
                 "ip": "192.168.1.1",
-                "sn": "XXXXXXXX",
+                "sn": "",
                 "user": "admin",
                 "password": "admin1"
             },
-            "apps": [
-                {
-                    "name": "",
-                    "inst": "",
-                    "version": 0
-                }
-            ]
+            "apps": []
         }
     ],
     "version": ${configVersion}
@@ -40,15 +34,18 @@ export interface Device {
 }
 
 export interface Application {
-    inst?: string;
-    name?: string;
-    version?: number;
+    inst: string;
+    local_dir: string;
 }
 
 export interface Configuration {
     name: string;
-    device?: Device;
+    device: Device;
     apps?: Application[];
+}
+
+export interface ApplicationDefaults {
+    applicationPath: string;
 }
 
 interface ConfigurationJson {
@@ -72,10 +69,11 @@ export class EditorProperties {
     // we want to track when the default includes have been added to it.
     private configurationIncomplete: boolean = true;
 
-    constructor(rootPath: string) {
+    constructor(rootPath: string, config: number) {
         console.assert(rootPath !== undefined);
         this.configFolder = path.join(rootPath, ".vscode");
-        this.resetToDefaultSettings(this.currentConfigurationIndex === -1);
+        this.currentConfigurationIndex = config;
+        //this.resetToDefaultSettings(this.currentConfigurationIndex === -1);
 
         let configFilePath: string = path.join(this.configFolder, "iot_editor_properties.json");
         if (fs.existsSync(configFilePath)) {
@@ -100,9 +98,6 @@ export class EditorProperties {
         });
 
         this.disposables.push(vscode.Disposable.from(this.configurationsChanged, this.selectionChanged, this.applicationSelectionChanged));
-
-        // Read configuration file
-        this.handleConfigurationChange();
     }
 
     public get ConfigurationsChanged(): vscode.Event<Configuration[]> { return this.configurationsChanged.event; }
@@ -118,19 +113,23 @@ export class EditorProperties {
         }
         return result;
     }
+    
+    public set ApplicationDefaults(applicationDefaults: ApplicationDefaults) {
+        this.handleConfigurationChange();
+    }
 
     private onConfigurationsChanged(): void {
-        console.log('Configuration onConfigurationsChanged');
+        console.log('[EditorProperties] onConfigurationsChanged');
         this.configurationsChanged.fire(this.Configurations);
     }
 
     private onSelectionChanged(): void {
-        console.log('Configuration onSelectionChanged');
+        console.log('[EditorProperties] onSelectionChanged');
         this.selectionChanged.fire(this.CurrentConfiguration);
     }
 
     private onApplicationSelectionChanged(inst: string): void {
-        console.log('Configuration onApplicationSelectionChanged');
+        console.log('[EditorProperties] onApplicationSelectionChanged');
         this.applicationSelectionChanged.fire(inst);
     }
 
@@ -163,15 +162,17 @@ export class EditorProperties {
         if (!this.configurationJson) {
             return;
         }
-        for (let i: number = 0; i < this.configurationJson.configurations.length; i++) {
-            // let configuration: Configuration = this.configurationJson.configurations[i];
-            // if (configuration.includePath) {
-            //     configuration.includePath = this.resolveAndSplit(configuration.includePath);
-            // }
-        }
+        // for (let i: number = 0; i < this.configurationJson.configurations.length; i++) {
+        //     let configuration: Configuration = this.configurationJson.configurations[i];
+        //     if (configuration.includePath) {
+        //         configuration.includePath = this.resolveAndSplit(configuration.includePath);
+        //     }
+        // }
 
         if (!this.configurationIncomplete) {
             this.onConfigurationsChanged();
+        } else {
+            console.log('!this.configurationIncomplete');
         }
     }
 
@@ -330,6 +331,12 @@ export class EditorProperties {
                 this.handleConfigurationChange();
             }
         });
+    }
+
+    public saveToFile(): void{
+        if (this.propertiesFile) {
+            fs.writeFileSync(this.propertiesFile.fsPath, JSON.stringify(this.configurationJson, null, 4));
+        }
     }
 
     dispose(): void {

@@ -80,6 +80,37 @@ export class UI {
             });
     }
 
+    public showIncorrectSN(sn: string, conf_sn: string) : Thenable<string> {
+        let options: vscode.MessageOptions =  {modal: false};
+        let msg = `Device SN ${sn} is different with configuration ${conf_sn}`;
+
+        return vscode.window.showWarningMessage(msg, options, { title: "Use " + sn },{ title: "Abort", isCloseAffordance: true })
+            .then(selection => {
+                if (!selection || selection.isCloseAffordance) {
+                    return conf_sn;
+                }
+                return sn;
+            });
+    }
+
+    public showApplications(applicationNames: string[]): Thenable<number> {
+        let options: vscode.QuickPickOptions = {};
+        options.placeHolder = "Select a Application...";
+
+        let items: IndexableQuickPickItem[] = [];
+        for (let i: number = 0; i < applicationNames.length; i++) {
+            items.push({ label: applicationNames[i], description: "", index: i });
+        }
+        items.push({ label: "Create new application...", description: "", index: applicationNames.length });
+
+        return vscode.window.showQuickPick(items, options)
+            .then(selection => {
+                if (!selection) {
+                    return -1;
+                }
+                return selection.index;
+            });
+    }
 
     public dispose(): void {
         this.configStatusBarItem.dispose();

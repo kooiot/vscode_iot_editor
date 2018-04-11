@@ -38,6 +38,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Device is connected."
+                },
+                "iot_editor.config": {
+                    "type": "number",
+                    "default": -1,
+                    "description": "Current configuration."
                 }
             }
         },

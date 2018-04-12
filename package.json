@@ -20,7 +20,7 @@
         "Language Packs"
     ],
     "activationEvents": [
-        "onCommand:iot_editor.configurationEdit"
+        "*"
     ],
     "main": "./out/extension",
     "contributes": {

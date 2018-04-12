@@ -64,7 +64,6 @@ export class EditorProperties {
     private disposables: vscode.Disposable[] = [];
     private configurationsChanged = new vscode.EventEmitter<Configuration[]>();
     private selectionChanged = new vscode.EventEmitter<number>();
-    private applicationSelectionChanged = new vscode.EventEmitter<string>();
 
     // Any time the `defaultSettings` are parsed and assigned to `this.configurationJson`,
     // we want to track when the default includes have been added to it.
@@ -98,12 +97,11 @@ export class EditorProperties {
             this.handleConfigurationChange();
         });
 
-        this.disposables.push(vscode.Disposable.from(this.configurationsChanged, this.selectionChanged, this.applicationSelectionChanged));
+        this.disposables.push(vscode.Disposable.from(this.configurationsChanged, this.selectionChanged));
     }
 
     public get ConfigurationsChanged(): vscode.Event<Configuration[]> { return this.configurationsChanged.event; }
     public get SelectionChanged(): vscode.Event<number> { return this.selectionChanged.event; }
-    public get ApplicationSelectionChanged(): vscode.Event<string> { return this.applicationSelectionChanged.event; }
     public get Configurations(): Configuration[] { return (this.configurationJson) ? this.configurationJson.configurations : []; }
     public get CurrentConfiguration(): number { return this.currentConfigurationIndex; }
 
@@ -127,11 +125,6 @@ export class EditorProperties {
     private onSelectionChanged(): void {
         console.log('[EditorProperties] onSelectionChanged');
         this.selectionChanged.fire(this.CurrentConfiguration);
-    }
-
-    private onApplicationSelectionChanged(inst: string): void {
-        console.log('[EditorProperties] onApplicationSelectionChanged');
-        this.applicationSelectionChanged.fire(inst);
     }
 
     private resetToDefaultSettings(resetIndex: boolean): void {

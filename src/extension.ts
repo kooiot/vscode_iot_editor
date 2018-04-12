@@ -16,6 +16,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     console.log('IOT Editor extension loaded!');
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.aboutEditor', aboutEditor));
+    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.udpPing', udpPing));
+    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.udpForward', udpForward));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.connect', deviceConnect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationSelect', configurationSelect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationEdit', configurationEdit));
@@ -36,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
         if (vscode.workspace.getConfiguration('iot_editor').get('auto') === true) {
-            fileUpload(e);
+            client.handleFileDownloadCommand(e);
         } else {
             console.log("EEEEEEEEEEE", vscode.workspace.getConfiguration('iot_editor').get('auto'));
         }
@@ -117,7 +119,13 @@ function applicationStart(): void {
     if (!isFolderOpen()) {
         vscode.window.showInformationMessage('Open a folder first to edit configurations');
     } else {
-        client.handleApplicationStartCommand();
+        let editor = vscode.window.activeTextEditor;
+        if (editor) {
+            client.handleApplicationStartCommand(editor.document);
+            return;
+        } else {
+            vscode.window.showInformationMessage("What's up?");
+        }
     }
 }
 
@@ -126,42 +134,40 @@ function applicationStop(): void {
     if (!isFolderOpen()) {
         vscode.window.showInformationMessage('Open a folder first to edit configurations');
     } else {
-        client.handleApplicationStopCommand();
-    }
-}
-
-function fileDownload(doc: vscode.TextDocument | undefined): void {
-    onActivationEvent();
-    if (!isFolderOpen()) {
-        vscode.window.showInformationMessage('Open a folder first to edit configurations');
-    } else {
-        if (doc === undefined) {
-            let editor = vscode.window.activeTextEditor;
-            if (editor) {
-                doc = editor.document;
-            }
-        }
-        if (doc) {
-            client.handleFileDownloadCommand(doc);
+        let editor = vscode.window.activeTextEditor;
+        if (editor) {
+            client.handleApplicationStopCommand(editor.document);
+            return;
         } else {
             vscode.window.showInformationMessage("What's up?");
         }
     }
 }
 
-function fileUpload(doc: vscode.TextDocument | undefined): void {
+function fileDownload(): void {
     onActivationEvent();
     if (!isFolderOpen()) {
         vscode.window.showInformationMessage('Open a folder first to edit configurations');
     } else {
-        if (doc === undefined) {
-            let editor = vscode.window.activeTextEditor;
-            if (editor) {
-                doc = editor.document;
-            }
+        let editor = vscode.window.activeTextEditor;
+        if (editor) {
+            client.handleFileDownloadCommand(editor.document);
+            return;
+        } else {
+            vscode.window.showInformationMessage("What's up?");
         }
-        if (doc) {
-            client.handleFileUploadCommand(doc);
+    }
+}
+
+function fileUpload(): void {
+    onActivationEvent();
+    if (!isFolderOpen()) {
+        vscode.window.showInformationMessage('Open a folder first to edit configurations');
+    } else {
+        let editor = vscode.window.activeTextEditor;
+        if (editor) {
+            client.handleFileUploadCommand(editor.document);
+            return;
         } else {
             vscode.window.showInformationMessage("What's up?");
         }
@@ -170,6 +176,12 @@ function fileUpload(doc: vscode.TextDocument | undefined): void {
 
 function aboutEditor(): void {
     vscode.window.showInformationMessage('About IOT Editor');
+}
+function udpPing(): void {
+    client.handleUDPPing();
+}
+function udpForward(): void {
+    client.startUDPForward();
 }
 
 export function isFolderOpen(): boolean {

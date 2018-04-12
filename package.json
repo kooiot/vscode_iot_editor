@@ -53,6 +53,16 @@
                 "category": "IOT"
             },
             {
+                "command": "iot_editor.udpPing",
+                "title": "Ping UDP Port",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.udpForward",
+                "title": "Start UDP Forward",
+                "category": "IOT"
+            },
+            {
                 "command": "iot_editor.connect",
                 "title": "Connect to device",
                 "category": "IOT",
@@ -180,6 +190,28 @@
                     "when": "config.iot_editor.online == false",
                     "command": "iot_editor.connect",
                     "group": "navigation"
+                }
+            ],
+            "editor/context": [
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.fileDownload",
+                    "group": "1_modification"
+                },
+                {
+                    "when": "config.iot_editor.online == true && config.iot_editor.auto == false",
+                    "command": "iot_editor.fileUpload",
+                    "group": "1_modification"
+                },
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.applicationStart",
+                    "group": "2_iot_editor"
+                },
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.applicationStop",
+                    "group": "2_iot_editor"
                 }
             ]
         }

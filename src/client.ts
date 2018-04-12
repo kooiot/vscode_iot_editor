@@ -9,9 +9,10 @@ import * as configs from "./configurations";
 import { UI, getUI } from './ui';
 import { DataBinding } from './dataBinding';
 import { disconnect } from 'cluster';
+import { UdpConn } from './udp_con';
+import { URL } from 'url';
 
 let ui: UI;
-let intervalTimer: NodeJS.Timer;
 
 let previousEditorSettings: { [key: string]: any } = {};
 
@@ -46,9 +47,11 @@ export class Client {
     private debugChannel: vscode.OutputChannel | undefined;
     private http_requst = request.defaults({jar: true});
     private connected: boolean = false;
+    private device_ip: string = "";
     private http_url_base: string = "";
     private device_sn:string = "";
     private device_apps:Application[] = [];
+    private udpServer: UdpConn;
 
     // The "model" that is displayed via the UI (status bar).
     private model: ClientModel = {
@@ -72,6 +75,12 @@ export class Client {
     }
     public get TrackedDocuments(): Set<vscode.TextDocument> {
         return this.trackedDocuments;
+    }
+    public get OutputChannel() : vscode.OutputChannel | undefined {
+        return this.outputChannel;
+    }
+    public get DebugChannel() : vscode.OutputChannel | undefined {
+        return this.debugChannel;
     }
 
     private getName(workspaceFolder?: vscode.WorkspaceFolder): string {
@@ -109,7 +118,6 @@ export class Client {
             this.configuration = new configs.EditorProperties(this.RootPath, conf);
             this.configuration.ConfigurationsChanged((e) => this.onConfigurationsChanged(e));
             this.configuration.SelectionChanged((e) => this.onSelectedConfigurationChanged(e));
-            this.configuration.ApplicationSelectionChanged((e) => this.onApplicationSelectionChanged(e));
             this.disposables.push(this.configuration);
             
             let defaults = {applicationPath: ""};
@@ -117,6 +125,8 @@ export class Client {
 
             this.setupOutputHandlers();
             this.registerFileWatcher();
+
+            this.udpServer = new UdpConn(this, 7000);
         }
         catch(err) {
             vscode.window.showErrorMessage('Failed to open : ' + err.message);
@@ -155,11 +165,11 @@ export class Client {
      * listen for logging messages from the language server and print them to the Output window
      */
     private setupOutputHandlers(): void {
-        if (this.debugChannel !== undefined) {
+        if (this.debugChannel === undefined) {
             this.debugChannel = vscode.window.createOutputChannel(`IOT Editor Debug: ${this.Name}`);
             this.disposables.push(this.debugChannel);
         }
-        if (this.outputChannel !== undefined) {
+        if (this.outputChannel === undefined) {
             if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
                 this.outputChannel = vscode.window.createOutputChannel(`IOT Editor: ${this.Name}`);
             } else {
@@ -215,7 +225,8 @@ export class Client {
             if (this.connected) {
                 this.disconnectDevice();
             }
-
+            
+            this.device_ip = ip;
             this.http_url_base = "http://" + ip + ":8808";
             this.device_sn = sn;
 
@@ -259,7 +270,13 @@ export class Client {
             vscode.workspace.getConfiguration('iot_editor').update('online', true);
             vscode.workspace.getConfiguration('iot_editor').update('config', cli.configuration.CurrentConfiguration);
             cli.connected = true;
+            cli.startUDPForward();
             cli.handleApplicationFetch();
+        });
+    }
+    public startUDPForward(): void {
+        this.httpPostRequest("/settings", {form: {action: "debugger", option: "forward", value: "true"}}, (body) => {
+            this.udpServer.startForward(this.device_ip);
         });
     }
 
@@ -321,11 +338,43 @@ export class Client {
     public handleApplicationUploadCommand(): void {
         
     }
-    public handleApplicationStartCommand(): void {
-        
+    public handleApplicationStartCommand(doc: vscode.TextDocument): void {
+        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
+        let app = this.getApplicationFromFilePath(abpath);
+        if (app) {
+            this.startApplication(app.inst);
+        } else {
+            vscode.window.showWarningMessage("Application instance is not found!");
+        }
     }
-    public handleApplicationStopCommand(): void {
-        
+    public handleApplicationStopCommand(doc: vscode.TextDocument): void {
+        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
+        let app = this.getApplicationFromFilePath(abpath);
+        if (app) {
+            this.stopApplication(app.inst);
+        } else {
+            vscode.window.showWarningMessage("Application instance is not found!");
+        }
+    }
+    private startApplication(inst: string): Thenable<void> {
+        console.log('Start Application', inst);
+        let promises: Thenable<void>[] = [];
+
+        this.httpPostRequest('/app/start', {form: {inst:inst, from_web:"true"}}, function(body) {
+            vscode.window.showInformationMessage(body);
+        });
+
+        return Promise.all(promises).then(() => undefined);
+    }
+    private stopApplication(inst: string): Thenable<void> {
+        console.log('Stop Application', inst);
+        let promises: Thenable<void>[] = [];
+
+        this.httpPostRequest('/app/stop', {form: {inst:inst, from_web:"true"}}, function(body) {
+            vscode.window.showInformationMessage(body);
+        });
+
+        return Promise.all(promises).then(() => undefined);
     }
     private updateDeviceSN(sn:string) {
         let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
@@ -510,7 +559,7 @@ export class Client {
         }
     }
     public handleFileDownloadCommand(doc: vscode.TextDocument): void {
-        let abpath = path.relative(this.RootPath, doc.fileName);
+        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
         let app = this.getApplicationFromFilePath(abpath);
         if (app) {
             // vscode.commands.executeCommand('workbench.action.closeActiveEditor');
@@ -522,7 +571,7 @@ export class Client {
         }
     }
     public handleFileUploadCommand(doc: vscode.TextDocument): void {
-        let abpath = path.relative(this.RootPath, doc.fileName);
+        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
         let app = this.getApplicationFromFilePath(abpath);
         if (app) {
             let fpath = "/" + path.relative(app.local_dir, abpath);
@@ -535,6 +584,10 @@ export class Client {
         } else {
             vscode.window.showWarningMessage("Application instance is not found!");
         }
+    }
+
+    public handleUDPPing(): void {
+        this.udpServer.ping(this.device_ip);
     }
 
     public onInterval(): void {

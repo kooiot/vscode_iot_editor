@@ -55,11 +55,11 @@ interface ConfigurationJson {
 }
 
 export class EditorProperties {
-    private propertiesFile: vscode.Uri|null = null;
+    private propertiesFile: vscode.Uri|undefined = undefined;
     private readonly configFolder: string;
-    private configurationJson: ConfigurationJson|null = null;
+    private configurationJson: ConfigurationJson|undefined = undefined;
     private currentConfigurationIndex: number = -1;
-    private configFileWatcher: vscode.FileSystemWatcher|null = null;
+    private configFileWatcher: vscode.FileSystemWatcher|undefined = undefined;
     private configFileWatcherFallbackTime: Date = new Date(); // Used when file watching fails.
     private disposables: vscode.Disposable[] = [];
     private configurationsChanged = new vscode.EventEmitter<Configuration[]>();
@@ -88,7 +88,7 @@ export class EditorProperties {
         });
 
         this.configFileWatcher.onDidDelete(() => {
-            this.propertiesFile = null;
+            this.propertiesFile = undefined;
             this.resetToDefaultSettings(true);
             this.handleConfigurationChange();
         });
@@ -313,13 +313,13 @@ export class EditorProperties {
         fs.stat(propertiesFile, (err, stats) => {
             if (err) {
                 console.log(err);
-                if (this.propertiesFile !== null) {
-                    this.propertiesFile = null; // File deleted.
+                if (this.propertiesFile !== undefined) {
+                    this.propertiesFile = undefined; // File deleted.
                     this.resetToDefaultSettings(true);
                     this.handleConfigurationChange();
                 }
             } else if (stats.mtime > this.configFileWatcherFallbackTime) {
-                if (this.propertiesFile === null) {
+                if (this.propertiesFile === undefined) {
                     this.propertiesFile = vscode.Uri.file(propertiesFile); // File created.
                 }
                 this.handleConfigurationChange();

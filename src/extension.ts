@@ -40,7 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (vscode.workspace.getConfiguration('iot_editor').get('auto') === true) {
             client.handleFileDownloadCommand(e);
         } else {
-            console.log("EEEEEEEEEEE", vscode.workspace.getConfiguration('iot_editor').get('auto'));
+            console.log("this is no auto", vscode.workspace.getConfiguration('iot_editor').get('auto'));
         }
     });
     /*
@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (vscode.workspace.getConfiguration('iot_editor').get('auto') === true) {
             fileDownload(e);
         } else {
-            console.log("EEEEEEEEEEE", vscode.workspace.getConfiguration('iot_editor').get('auto'));
+            console.log("this is no auto", vscode.workspace.getConfiguration('iot_editor').get('auto'));
         }
     });
     */

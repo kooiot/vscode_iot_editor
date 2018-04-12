@@ -9,11 +9,9 @@ export class UdpConn {
     private disposables: vscode.Disposable[] = [];
     private client: Client;
     private udpServer: dgram.Socket;
-    private udpPort: number;
     
     constructor( client: Client, port: number) {
         this.client = client;
-        this.udpPort = port;
         this.udpServer = dgram.createSocket("udp4");
         this.udpServer.addListener("message", (msg: Buffer, rinfo: dgram.AddressInfo) => {
             this.onData(msg, rinfo);

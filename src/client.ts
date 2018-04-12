@@ -4,13 +4,11 @@ import * as path from 'path';
 import * as fs from "fs";
 import * as vscode from 'vscode';
 import * as request from 'request';
-import * as util from "./util"
+import * as util from "./util";
 import * as configs from "./configurations";
 import { UI, getUI } from './ui';
 import { DataBinding } from './dataBinding';
-import { disconnect } from 'cluster';
 import { UdpConn } from './udp_con';
-import { URL } from 'url';
 
 let ui: UI;
 
@@ -91,20 +89,20 @@ export class Client {
         // This relies on getNonDefaultSettings being called first.
         console.assert(Object.keys(previousEditorSettings).length > 0);
 
-        let filter: (key: string, val: string) => boolean = (key: string, val: string) => {
-            return !(key in previousEditorSettings) || val !== previousEditorSettings[key];
-        };
+        // let filter: (key: string, val: string) => boolean = (key: string, val: string) => {
+        //     return !(key in previousEditorSettings) || val !== previousEditorSettings[key];
+        // };
     }
 
     public onDidChangeVisibleTextEditors(editors: vscode.TextEditor[]): void {
     }
     
     
-    private get CurrentApplications(): string[] { 
-        let result: string[] = [];
-        this.device_apps.forEach((app: Application) => result.push(app.inst));
-        return result;
-    }
+    // private get CurrentApplications(): string[] { 
+    //     let result: string[] = [];
+    //     this.device_apps.forEach((app: Application) => result.push(app.inst));
+    //     return result;
+    // }
 
     constructor( workspaceFolder?: vscode.WorkspaceFolder) {
         this.rootFolder = workspaceFolder;
@@ -304,10 +302,6 @@ export class Client {
         this.connectDevice();
     }
 
-    private onApplicationSelectionChanged(filepath: string): void {
-        console.log('[Client] onApplicationSelectionChanged');
-    }
-
     /*********************************************
      * command handlers
      *********************************************/
@@ -325,7 +319,6 @@ export class Client {
         this.configuration.handleConfigurationEditCommand(vscode.window.showTextDocument);
     }
     public handleApplicationDownloadCommand(): void {
-        let apps = this.CurrentApplications;
         ui.showApplications(this.device_apps)
             .then((index: number) => {
                 if (index < 0) {

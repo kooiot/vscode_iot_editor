@@ -1,6 +1,6 @@
 'use strict';
 
-import * as vscode from 'vscode';
+//import * as vscode from 'vscode';
 
 export function make_promise(): Promise<void> {
     return new Promise<void>((resolve, reject) => {

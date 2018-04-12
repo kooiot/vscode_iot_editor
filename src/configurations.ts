@@ -308,6 +308,9 @@ export class EditorProperties {
     // }
 
     public checkEditorProperties(): void {
+        if (!this.propertiesFile) {
+            return;
+        }
         // Check for change properties in case of file watcher failure.
         let propertiesFile: string = path.join(this.configFolder, "iot_editor_properties.json");
         fs.stat(propertiesFile, (err, stats) => {

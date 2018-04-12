@@ -52,6 +52,8 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
     */
+
+   vscode.window.showInformationMessage('IOT Editor extension loaded!');
 }
 
 // this method is called when your extension is deactivated

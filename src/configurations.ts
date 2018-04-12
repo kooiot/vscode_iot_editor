@@ -35,6 +35,7 @@ export interface Device {
 
 export interface Application {
     inst: string;
+    version: number;
     local_dir: string;
 }
 

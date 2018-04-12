@@ -27,17 +27,35 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.fileUpload', fileUpload));
 
     vscode.workspace.getConfiguration('iot_editor').update('online', false);
-    vscode.workspace.getConfiguration('iot_editor').update('enabled', true);
     
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
         let rootFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders[0];        
         client = new Client(rootFolder);
     }
     intervalTimer = setInterval(onInterval, 2500);
+
+    vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
+        if (vscode.workspace.getConfiguration('iot_editor').get('auto') === true) {
+            fileUpload(e);
+        } else {
+            console.log("EEEEEEEEEEE", vscode.workspace.getConfiguration('iot_editor').get('auto'));
+        }
+    });
+    /*
+    vscode.workspace.onDidOpenTextDocument((e: vscode.TextDocument) => {
+        if (vscode.workspace.getConfiguration('iot_editor').get('auto') === true) {
+            fileDownload(e);
+        } else {
+            console.log("EEEEEEEEEEE", vscode.workspace.getConfiguration('iot_editor').get('auto'));
+        }
+    });
+    */
 }
 
 // this method is called when your extension is deactivated
 export function deactivate() {
+    vscode.workspace.getConfiguration('iot_editor').update('online', false);
+
     clearInterval(intervalTimer);
     client.dispose();
 }
@@ -112,21 +130,41 @@ function applicationStop(): void {
     }
 }
 
-function fileDownload(): void {
+function fileDownload(doc: vscode.TextDocument | undefined): void {
     onActivationEvent();
     if (!isFolderOpen()) {
         vscode.window.showInformationMessage('Open a folder first to edit configurations');
     } else {
-        client.handleFileDownloadCommand();
+        if (doc === undefined) {
+            let editor = vscode.window.activeTextEditor;
+            if (editor) {
+                doc = editor.document;
+            }
+        }
+        if (doc) {
+            client.handleFileDownloadCommand(doc);
+        } else {
+            vscode.window.showInformationMessage("What's up?");
+        }
     }
 }
 
-function fileUpload(): void {
+function fileUpload(doc: vscode.TextDocument | undefined): void {
     onActivationEvent();
     if (!isFolderOpen()) {
         vscode.window.showInformationMessage('Open a folder first to edit configurations');
     } else {
-        client.handleFileUploadCommand();
+        if (doc === undefined) {
+            let editor = vscode.window.activeTextEditor;
+            if (editor) {
+                doc = editor.document;
+            }
+        }
+        if (doc) {
+            client.handleFileUploadCommand(doc);
+        } else {
+            vscode.window.showInformationMessage("What's up?");
+        }
     }
 }
 

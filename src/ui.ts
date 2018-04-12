@@ -5,7 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { Client } from './client';
+import { Client, Application } from './client';
 
 let ui: UI;
 
@@ -93,15 +93,15 @@ export class UI {
             });
     }
 
-    public showApplications(applicationNames: string[]): Thenable<number> {
+    public showApplications(apps: Application[]): Thenable<number> {
         let options: vscode.QuickPickOptions = {};
         options.placeHolder = "Select a Application...";
 
         let items: IndexableQuickPickItem[] = [];
-        for (let i: number = 0; i < applicationNames.length; i++) {
-            items.push({ label: applicationNames[i], description: "", index: i });
+        for (let i: number = 0; i < apps.length; i++) {
+            items.push({ label: apps[i].inst, description: "", detail: "Application: " + apps[i].name + "\t Version: " + apps[i].version, index: i });
         }
-        items.push({ label: "Create new application...", description: "", index: applicationNames.length });
+        items.push({ label: "Create new application...", description: "", index: apps.length });
 
         return vscode.window.showQuickPick(items, options)
             .then(selection => {

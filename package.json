@@ -29,15 +29,15 @@
             "type": "object",
             "title": "IOT Editor configuration",
             "properties": {
-                "iot_editor.enabled": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "IOT Editor is enabled."
-                },
                 "iot_editor.online": {
                     "type": "boolean",
                     "default": false,
                     "description": "Device is connected."
+                },
+                "iot_editor.auto": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Auto upload when file saved."
                 },
                 "iot_editor.config": {
                     "type": "number",
@@ -153,20 +153,16 @@
                     "command": "iot_editor.applicationStop"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
+                    "when": "editorIsOpen && config.iot_editor.online == true",
                     "command": "iot_editor.fileDownload"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
+                    "when": "editorIsOpen && config.iot_editor.online == true && config.iot_editor.auto == false",
                     "command": "iot_editor.fileUpload"
                 },
                 {
-                    "when": "config.iot_editor.enabled && config.iot_editor.online == false",
+                    "when": "config.iot_editor.online == false",
                     "command": "iot_editor.connect"
-                },
-                {
-                    "when": "config.iot_editor.enabled",
-                    "command": "iot_editor.configurationSelect"
                 }
             ],
             "editor/title": [
@@ -176,12 +172,12 @@
                     "group": "navigation"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
+                    "when": "config.iot_editor.online == true && config.iot_editor.auto == false",
                     "command": "iot_editor.fileUpload",
                     "group": "navigation"
                 },
                 {
-                    "when": "config.iot_editor.enabled && config.iot_editor.online == false",
+                    "when": "config.iot_editor.online == false",
                     "command": "iot_editor.connect",
                     "group": "navigation"
                 }

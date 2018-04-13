@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
-
+    
     console.log('IOT Editor extension loaded!');
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.aboutEditor', aboutEditor));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.udpPing', udpPing));
@@ -52,8 +52,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
     */
-
-   vscode.window.showInformationMessage('IOT Editor extension loaded!');
 }
 
 // this method is called when your extension is deactivated

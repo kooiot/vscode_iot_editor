@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "IOT Editor for building application",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",
@@ -17,10 +17,11 @@
         "url": "https://github.com/kooiot/vscode_iot_editor.git"
     },
     "categories": [
-        "Language Packs"
+        "Other"
     ],
     "activationEvents": [
-        "*"
+        "onCommand:iot_editor.configurationEdit",
+        "workspaceContains:**/iot_editor_properties.json"
     ],
     "main": "./out/extension",
     "contributes": {
@@ -230,6 +231,7 @@
         "vscode": "^1.1.6"
     },
     "dependencies": {
-        "@types/request": "^2.47.0"
+        "@types/request": "^2.47.0",
+        "request": "^2.85.0"
     }
 }

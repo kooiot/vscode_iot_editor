@@ -19,6 +19,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.udpPing', udpPing));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.udpForward', udpForward));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.connect', deviceConnect));
+    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.disconnect', deviceDisconnect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationSelect', configurationSelect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationEdit', configurationEdit));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationDownload', applicationDownload));
@@ -75,6 +76,15 @@ function deviceConnect(): void {
         vscode.window.showInformationMessage('Open a folder first to select a configuration');
     } else {
         client.handleConfigurationSelectCommand();
+    }
+}
+
+function deviceDisconnect(): void {
+    onActivationEvent();
+    if (!isFolderOpen()) {
+        vscode.window.showInformationMessage('Open a folder first to select a configuration');
+    } else {
+        client.handleDisconnectCommand();
     }
 }
 

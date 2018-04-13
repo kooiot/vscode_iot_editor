@@ -282,6 +282,9 @@ export class Client {
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
         this.connected = false;
         this.device_apps = [];
+        this.device_ip = "";
+        this.http_url_base = "";
+        this.device_sn = "";
     }
     
     private onConfigurationsChanged(configurations: configs.Configuration[]): void {
@@ -305,6 +308,10 @@ export class Client {
     /*********************************************
      * command handlers
      *********************************************/
+    public handleDisconnectCommand(): void {
+        this.disconnectDevice();
+    }
+
     public handleConfigurationSelectCommand(): void {
         ui.showConfigurations(this.configuration.ConfigurationNames)
             .then((index: number) => {

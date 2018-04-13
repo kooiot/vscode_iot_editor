@@ -20,6 +20,7 @@
         "Other"
     ],
     "activationEvents": [
+        "onCommand:iot_editor.aboutEditor",
         "onCommand:iot_editor.configurationEdit",
         "workspaceContains:**/iot_editor_properties.json"
     ],
@@ -69,6 +70,15 @@
                 "icon": {
                     "light": "./media/icon/connect.svg",
                     "dark": "./media/icon/connect_inverse.svg"
+                }
+            },
+            {
+                "command": "iot_editor.disconnect",
+                "title": "Disconnect to device",
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/disconnect.svg",
+                    "dark": "./media/icon/disconnect_inverse.svg"
                 }
             },
             {

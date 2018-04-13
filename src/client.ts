@@ -334,6 +334,27 @@ export class Client {
     public handleConfigurationEditCommand(): void {
         this.configuration.handleConfigurationEditCommand(vscode.window.showTextDocument);
     }
+
+    public handleApplicationCreateCommand(): void {
+        ui.showApplicationCreate().then(( app: Application|undefined) => {
+            if (!app) {
+                return;
+            }
+            this.httpPostRequest("/app/new", {form:{inst:app.inst, app:app.name}}, (body) => {
+                if (body === "Application creation is done!") {
+                    app.version = 0;
+                    app.islocal = 1;
+                    this.device_apps.push(app);
+                    setTimeout(async ()=>{
+                        this.downloadApplication(app);
+                    }, 1000);
+                } else {
+                    vscode.window.showErrorMessage(body);
+                }
+            });
+        });
+    }
+
     public handleApplicationDownloadCommand(): void {
         ui.showApplications(this.device_apps)
             .then((index: number) => {
@@ -455,6 +476,10 @@ export class Client {
             .then(() => {
                 vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
                 this.configuration.saveToFile();
+                let main_file: string = this.RootPath + "\\" + local_dir + "\\app.lua";
+                setTimeout(async ()=>{
+                    vscode.workspace.openTextDocument(main_file).then(vscode.window.showTextDocument);
+                }, 3000);
             });
     }
     private realDownloadApplication(local_dir: string, inst: string, id: string): Thenable<void>  {

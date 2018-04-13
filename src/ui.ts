@@ -111,6 +111,25 @@ export class UI {
                 return selection.index;
             });
     }
+    
+    public showApplicationCreate(): Thenable<Application|undefined>  {
+        return vscode.window.showInputBox({prompt: "Please input application name"}).then(app_name => {
+            if (app_name) {
+                return vscode.window.showInputBox({prompt: "Please input application instance"}).then(app_inst => {
+                    if (app_inst) {
+                        let app: Application = {
+                            inst: app_inst,
+                            name: app_name,
+                            version: 0,
+                            sn: "",
+                            running: false
+                        };
+                        return app;
+                    }
+                });
+            }
+        });
+    }
 
     public dispose(): void {
         this.configStatusBarItem.dispose();

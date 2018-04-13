@@ -104,6 +104,15 @@
                 }
             },
             {
+                "command": "iot_editor.applicationCreate",
+                "title": "Create new application...",
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/download.svg",
+                    "dark": "./media/icon/download_inverse.svg"
+                }
+            },
+            {
                 "command": "iot_editor.applicationDownload",
                 "title": "Download application...",
                 "category": "IOT",

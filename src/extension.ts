@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
         if (vscode.workspace.getConfiguration('iot_editor').get('auto') === true) {
-            client.handleFileDownloadCommand(e);
+            client.handleFileUploadCommand(e);
         } else {
             console.log("this is no auto", vscode.workspace.getConfiguration('iot_editor').get('auto'));
         }

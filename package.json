@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "IOT Editor for building application",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",
@@ -36,7 +36,7 @@
                 },
                 "iot_editor.auto": {
                     "type": "boolean",
-                    "default": false,
+                    "default": true,
                     "description": "Auto upload when file saved."
                 },
                 "iot_editor.config": {

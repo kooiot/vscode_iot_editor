@@ -352,9 +352,11 @@ export class Client {
         let app = this.getApplicationFromFilePath(abpath);
         if (app) {
             this.stopApplication(app.inst).then(()=> {
-                if (app) {
-                    this.startApplication(app.inst);
-                }
+                    setTimeout(async ()=>{
+                        if (app) {
+                            this.startApplication(app.inst);
+                        }
+                    }, 1000);
             });
         } else {
             vscode.window.showWarningMessage("Application instance is not found!");

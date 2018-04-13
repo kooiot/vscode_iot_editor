@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "IOT Editor for building application",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",
@@ -141,7 +141,7 @@
             },
             {
                 "command": "iot_editor.applicationRestart",
-                "title": "Stop application...",
+                "title": "Restart application...",
                 "category": "IOT",
                 "icon": {
                     "light": "./media/icon/download.svg",

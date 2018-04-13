@@ -24,6 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationEdit', configurationEdit));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationDownload', applicationDownload));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationUpload', applicationUpload));
+    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationRestart', applicationRestart));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationStart', applicationStart));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationStop', applicationStop));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.fileDownload', fileDownload));
@@ -121,6 +122,21 @@ function applicationUpload(): void {
         vscode.window.showInformationMessage('Open a folder first to edit configurations');
     } else {
         client.handleApplicationUploadCommand();
+    }
+}
+
+function applicationRestart(): void {
+    onActivationEvent();
+    if (!isFolderOpen()) {
+        vscode.window.showInformationMessage('Open a folder first to edit configurations');
+    } else {
+        let editor = vscode.window.activeTextEditor;
+        if (editor) {
+            client.handleApplicationRestartCommand(editor.document);
+            return;
+        } else {
+            vscode.window.showInformationMessage("What's up?");
+        }
     }
 }
 

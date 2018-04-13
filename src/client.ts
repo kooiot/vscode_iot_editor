@@ -164,14 +164,17 @@ export class Client {
      */
     private setupOutputHandlers(): void {
         if (this.debugChannel === undefined) {
-            this.debugChannel = vscode.window.createOutputChannel(`IOT Editor Debug: ${this.Name}`);
+            //this.debugChannel = vscode.window.createOutputChannel(`IOT 报文: ${this.Name}`);
+            this.debugChannel = vscode.window.createOutputChannel(`IOT 报文`);
             this.disposables.push(this.debugChannel);
         }
         if (this.outputChannel === undefined) {
             if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
-                this.outputChannel = vscode.window.createOutputChannel(`IOT Editor: ${this.Name}`);
+                //this.outputChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`);
+                this.outputChannel = vscode.window.createOutputChannel(`IOT 日志`);
             } else {
-                this.outputChannel = vscode.window.createOutputChannel(`IOT Editor: ${this.Name}`); //logger.getOutputChannel();
+                //this.outputChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`); //logger.getOutputChannel();
+                this.outputChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`); //logger.getOutputChannel();
             }
             this.disposables.push(this.outputChannel);
         }
@@ -277,8 +280,14 @@ export class Client {
             this.udpServer.startForward(this.device_ip);
         });
     }
+    private stopUDPForward(): void {
+        this.httpPostRequest("/settings", {form: {action: "debugger", option: "forward", value: "false"}}, (body) => {
+            this.udpServer.startForward(this.device_ip);
+        });
+    }
 
     private disconnectDevice() {
+        this.stopUDPForward();
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
         this.connected = false;
         this.device_apps = [];
@@ -337,6 +346,19 @@ export class Client {
     }
     public handleApplicationUploadCommand(): void {
         
+    }
+    public handleApplicationRestartCommand(doc: vscode.TextDocument): void {
+        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
+        let app = this.getApplicationFromFilePath(abpath);
+        if (app) {
+            this.stopApplication(app.inst).then(()=> {
+                if (app) {
+                    this.startApplication(app.inst);
+                }
+            });
+        } else {
+            vscode.window.showWarningMessage("Application instance is not found!");
+        }
     }
     public handleApplicationStartCommand(doc: vscode.TextDocument): void {
         let abpath = path.relative(this.RootPath, doc.uri.fsPath);

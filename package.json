@@ -20,7 +20,6 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:iot_editor.aboutEditor",
         "onCommand:iot_editor.configurationEdit",
         "workspaceContains:**/iot_editor_properties.json"
     ],
@@ -44,6 +43,11 @@
                     "type": "number",
                     "default": -1,
                     "description": "Current configuration."
+                },
+                "iot_editor.debug": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Debug mode"
                 }
             }
         },
@@ -136,6 +140,15 @@
                 }
             },
             {
+                "command": "iot_editor.applicationRestart",
+                "title": "Stop application...",
+                "category": "IOT",
+                "icon": {
+                    "light": "./media/icon/download.svg",
+                    "dark": "./media/icon/download_inverse.svg"
+                }
+            },
+            {
                 "command": "iot_editor.fileDownload",
                 "title": "Download file...",
                 "category": "IOT",
@@ -156,6 +169,22 @@
         ],
         "menus": {
             "commandPalette": [
+                {
+                    "when": "config.iot_editor.debug == true",
+                    "command": "iot_editor.aboutEditor"
+                },
+                {
+                    "when": "config.iot_editor.debug == true",
+                    "command": "iot_editor.udpPing"
+                },
+                {
+                    "when": "config.iot_editor.debug == true",
+                    "command": "iot_editor.udpForward"
+                },
+                {
+                    "when": "config.iot_editor.online == false",
+                    "command": "iot_editor.connect"
+                },
                 {
                     "when": "config.iot_editor.online == true",
                     "command": "iot_editor.applicationDownload"
@@ -204,6 +233,11 @@
             ],
             "editor/context": [
                 {
+                    "when": "config.iot_editor.online == false",
+                    "command": "iot_editor.connect",
+                    "group": "1_modification"
+                },
+                {
                     "when": "config.iot_editor.online == true",
                     "command": "iot_editor.fileDownload",
                     "group": "1_modification"
@@ -212,6 +246,11 @@
                     "when": "config.iot_editor.online == true && config.iot_editor.auto == false",
                     "command": "iot_editor.fileUpload",
                     "group": "1_modification"
+                },
+                {
+                    "when": "config.iot_editor.online == true",
+                    "command": "iot_editor.applicationRestart",
+                    "group": "2_iot_editor"
                 },
                 {
                     "when": "config.iot_editor.online == true",

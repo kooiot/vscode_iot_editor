@@ -21,7 +21,9 @@ export class UdpConn {
         });
         this.udpServer.addListener("listening", () => {
             let addr = this.udpServer.address();
-            vscode.window.showInformationMessage("UDP is listening on " + addr.address + ":" + addr.port);
+            if (this.client.OutputChannel) {
+                this.client.OutputChannel.appendLine("UDP is listening on " + addr.address + ":" + addr.port);
+            }
         });
         this.udpServer.bind(port);
     }

@@ -173,50 +173,63 @@ export class Client {
         }
         if (this.commChannel === undefined) {
             //this.debugChannel = vscode.window.createOutputChannel(`IOT 报文: ${this.Name}`);
-            this.commChannel = vscode.window.createOutputChannel(`设备报文`);
+            this.commChannel = vscode.window.createOutputChannel(`IOT 设备报文`);
             this.disposables.push(this.commChannel);
         }
         if (this.logChannel === undefined) {
             if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
                 //this.logChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`);
-                this.logChannel = vscode.window.createOutputChannel(`设备日志`);
+                this.logChannel = vscode.window.createOutputChannel(`IOT 设备日志`);
             } else {
                 //this.logChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`); //logger.getOutputChannel();
-                this.logChannel = vscode.window.createOutputChannel(`设备日志: ${this.Name}`); //logger.getOutputChannel();
+                this.logChannel = vscode.window.createOutputChannel(`IOT 设备日志`); //logger.getOutputChannel();
             }
             this.disposables.push(this.logChannel);
         }
     }
+    private appendOutput(log: string) {
+        if (this.outputChannel) {
+            this.outputChannel.appendLine(log);
+        }
+    }
 
     private httpPostRequest(url: string, options: request.CoreOptions, onSuccess: (body: any) => void) {
-        this.http_requst.post(this.http_url_base + url, options, function(e, r, body) {
+        this.http_requst.post(this.http_url_base + url, options, (e, r, body) => {
             if (r && r.statusCode === 200) {
                 onSuccess(body);
             } else {
+                this.appendOutput(`Failed on post url ${url}`);
                 if (body) {
-                    vscode.window.showErrorMessage(body);
+                    this.appendOutput(body);
                 } else {
-                    vscode.window.showErrorMessage(e.message);
+                    this.appendOutput(e.message);
                 }
             }
         });
     }
-    private httpGetRequest(url: string, options: request.CoreOptions, onSuccess: (body: any) => void) {
-        this.http_requst.get(this.http_url_base + url, options, function(e, r, body) {
+    private httpGetRequest(url: string, options: request.CoreOptions, onSuccess: (body: any) => void, onFailed: ((err:any) => void) | undefined = undefined)  {
+        this.http_requst.get(this.http_url_base + url, options, (e, r, body) => {
             if (r && r.statusCode === 200) {
                 onSuccess(body);
             } else {
-                console.log(e, r, body);
+                this.appendOutput(`Failed on request url ${url}`);
                 if (body) {
-                    vscode.window.showErrorMessage(body);
+                    this.appendOutput(body);
+                    if (onFailed) {
+                        onFailed(body);
+                    }
                 } else {
-                    vscode.window.showErrorMessage(e.message);
+                    this.appendOutput(e.message);
+                    if (onFailed) {
+                        onFailed(e.message);
+                    }
                 }
             }
         });
     }
 
     private connectDevice() {
+        this.appendOutput('Connect device....');
         let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
 
         let dev: configs.Device | undefined = conf.device;
@@ -227,7 +240,7 @@ export class Client {
             let password: string = dev.password ? dev.password : "admin1";
             let url_base = "http://" + ip + ":8808";
             if (this.http_url_base === url_base && this.device_sn === sn) {
-                //vscode.window.showWarningMessage("Device SN/IP are same!");
+                this.appendOutput("Device SN/IP are same!");
                 return;
             }
                 
@@ -259,7 +272,6 @@ export class Client {
             if (info.iot_sn === this.device_sn) {
                 on_ready();
             } else {
-                ///vscode.window.showErrorMessage("Device SN is not expected!!!");
                 ui.showIncorrectSN(info.iot_sn, this.device_sn).then((sn: string) => {
                     if (sn !== this.device_sn) {
                         this.updateDeviceSN(sn);
@@ -267,6 +279,8 @@ export class Client {
                     this.disconnectDevice();
                 });
             }
+        }, (err) => {
+            vscode.window.showErrorMessage(`Cannot fetch device information from device ${this.device_ip}`);
         });
     }
     private realConnectDevice(user:string, password:string) {
@@ -275,6 +289,7 @@ export class Client {
             vscode.window.showInformationMessage(`Login to device ${this.device_ip} completed`);
             if (this.outputChannel) {
                 this.outputChannel.appendLine(`Login to device ${this.device_ip} completed`);
+                this.outputChannel.show();
             }
             vscode.workspace.getConfiguration('iot_editor').update('online', true);
             vscode.workspace.getConfiguration('iot_editor').update('config', this.configuration.CurrentConfiguration);
@@ -284,6 +299,7 @@ export class Client {
         });
     }
     public startUDPForward(): void {
+        this.appendOutput('Request device forwarding log/comm to this computer');
         this.httpPostRequest("/settings", {form: {action: "debugger", option: "forward", value: "true"}}, (body) => {
             this.udpServer.startForward(this.device_ip);
         });
@@ -295,6 +311,7 @@ export class Client {
     }
 
     private disconnectDevice() {
+        this.appendOutput('Disconnect device....');
         this.stopUDPForward();
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
         this.connected = false;

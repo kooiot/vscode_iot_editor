@@ -42,7 +42,8 @@ export class Client {
     private rootFolder: vscode.WorkspaceFolder | undefined;
     private trackedDocuments = new Set<vscode.TextDocument>();
     private outputChannel: vscode.OutputChannel | undefined;
-    private debugChannel: vscode.OutputChannel | undefined;
+    private logChannel: vscode.OutputChannel | undefined;
+    private commChannel: vscode.OutputChannel | undefined;
     private http_requst = request.defaults({jar: true});
     private connected: boolean = false;
     private device_ip: string = "";
@@ -77,8 +78,11 @@ export class Client {
     public get OutputChannel() : vscode.OutputChannel | undefined {
         return this.outputChannel;
     }
-    public get DebugChannel() : vscode.OutputChannel | undefined {
-        return this.debugChannel;
+    public get LogChannel() : vscode.OutputChannel | undefined {
+        return this.logChannel;
+    }
+    public get CommChannel() : vscode.OutputChannel | undefined {
+        return this.commChannel;
     }
 
     private getName(workspaceFolder?: vscode.WorkspaceFolder): string {
@@ -163,20 +167,24 @@ export class Client {
      * listen for logging messages from the language server and print them to the Output window
      */
     private setupOutputHandlers(): void {
-        if (this.debugChannel === undefined) {
-            //this.debugChannel = vscode.window.createOutputChannel(`IOT 报文: ${this.Name}`);
-            this.debugChannel = vscode.window.createOutputChannel(`IOT 报文`);
-            this.disposables.push(this.debugChannel);
-        }
         if (this.outputChannel === undefined) {
-            if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
-                //this.outputChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`);
-                this.outputChannel = vscode.window.createOutputChannel(`IOT 日志`);
-            } else {
-                //this.outputChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`); //logger.getOutputChannel();
-                this.outputChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`); //logger.getOutputChannel();
-            }
+            this.outputChannel = vscode.window.createOutputChannel(`IOT EDITOR`);
             this.disposables.push(this.outputChannel);
+        }
+        if (this.commChannel === undefined) {
+            //this.debugChannel = vscode.window.createOutputChannel(`IOT 报文: ${this.Name}`);
+            this.commChannel = vscode.window.createOutputChannel(`设备报文`);
+            this.disposables.push(this.commChannel);
+        }
+        if (this.logChannel === undefined) {
+            if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 1) {
+                //this.logChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`);
+                this.logChannel = vscode.window.createOutputChannel(`设备日志`);
+            } else {
+                //this.logChannel = vscode.window.createOutputChannel(`IOT 日志: ${this.Name}`); //logger.getOutputChannel();
+                this.logChannel = vscode.window.createOutputChannel(`设备日志: ${this.Name}`); //logger.getOutputChannel();
+            }
+            this.disposables.push(this.logChannel);
         }
     }
 
@@ -231,15 +239,13 @@ export class Client {
             this.http_url_base = "http://" + ip + ":8808";
             this.device_sn = sn;
 
-            let cli = this;
-            this.fetchSysInfo(function() {
-                cli.realConnectDevice(user, password);
+            this.fetchSysInfo(() => {
+                this.realConnectDevice(user, password);
             });
         }
     }
     private fetchSysInfo(on_ready: () => void) {
-        let cli = this;
-        this.httpGetRequest("/sys/info", {}, function(body) {
+        this.httpGetRequest("/sys/info", {}, (body)=> {
             interface SysInfo {
                 iot_sn: string;
                 using_beta: boolean;
@@ -247,32 +253,34 @@ export class Client {
             let info: SysInfo = Object.assign({}, JSON.parse(body));
             if (!info.using_beta) {
                 vscode.window.showErrorMessage("Device is not in beta mode!!!");
-                cli.disconnectDevice();
+                this.disconnectDevice();
                 return;
             }
-            if (info.iot_sn === cli.device_sn) {
+            if (info.iot_sn === this.device_sn) {
                 on_ready();
             } else {
                 ///vscode.window.showErrorMessage("Device SN is not expected!!!");
-                ui.showIncorrectSN(info.iot_sn, cli.device_sn).then((sn: string) => {
-                    if (sn !== cli.device_sn) {
-                        cli.updateDeviceSN(sn);
+                ui.showIncorrectSN(info.iot_sn, this.device_sn).then((sn: string) => {
+                    if (sn !== this.device_sn) {
+                        this.updateDeviceSN(sn);
                     }
-                    cli.disconnectDevice();
+                    this.disconnectDevice();
                 });
             }
         });
     }
     private realConnectDevice(user:string, password:string) {
         console.log('[Client] HTTP\t', this.http_url_base);
-        let cli = this;
-        this.httpPostRequest("/user/login", {form: {username:user, password:password}}, function(body) {
-            vscode.window.showInformationMessage('Login to device completed');
+        this.httpPostRequest("/user/login", {form: {username:user, password:password}}, (body) => {
+            vscode.window.showInformationMessage(`Login to device ${this.device_ip} completed`);
+            if (this.outputChannel) {
+                this.outputChannel.appendLine(`Login to device ${this.device_ip} completed`);
+            }
             vscode.workspace.getConfiguration('iot_editor').update('online', true);
-            vscode.workspace.getConfiguration('iot_editor').update('config', cli.configuration.CurrentConfiguration);
-            cli.connected = true;
-            cli.startUDPForward();
-            cli.handleApplicationFetch();
+            vscode.workspace.getConfiguration('iot_editor').update('config', this.configuration.CurrentConfiguration);
+            this.connected = true;
+            this.startUDPForward();
+            this.handleApplicationFetch();
         });
     }
     public startUDPForward(): void {
@@ -361,7 +369,11 @@ export class Client {
                 if (index < 0) {
                     return;
                 }
-                this.downloadApplication(this.device_apps[index]);
+                if (index >= this.device_apps.length) {
+                    this.handleApplicationCreateCommand();
+                } else {
+                    this.downloadApplication(this.device_apps[index]);
+                }
             });
 
     }
@@ -405,7 +417,7 @@ export class Client {
         console.log('Start Application', inst);
         let promises: Thenable<void>[] = [];
 
-        this.httpPostRequest('/app/start', {form: {inst:inst, from_web:"true"}}, function(body) {
+        this.httpPostRequest('/app/start', {form: {inst:inst, from_web:"true"}}, (body) => {
             vscode.window.showInformationMessage(body);
         });
 
@@ -415,7 +427,7 @@ export class Client {
         console.log('Stop Application', inst);
         let promises: Thenable<void>[] = [];
 
-        this.httpPostRequest('/app/stop', {form: {inst:inst, from_web:"true"}}, function(body) {
+        this.httpPostRequest('/app/stop', {form: {inst:inst, from_web:"true"}}, (body) => {
             vscode.window.showInformationMessage(body);
         });
 
@@ -431,8 +443,7 @@ export class Client {
     }
     private handleApplicationFetch(): void {
         console.log('[Client] handleApplicationFetch');
-        let cli = this;
-        this.httpGetRequest("/app/list", {}, function(body) {
+        this.httpGetRequest("/app/list", {}, (body) => {
             interface AppList {
                 apps:{ [key: string]: Application; };
                 using_beta: boolean;
@@ -444,7 +455,7 @@ export class Client {
                     if (!list.apps[k].inst) {
                         list.apps[k].inst = k;
                     }
-                    cli.device_apps.push(list.apps[k]);
+                    this.device_apps.push(list.apps[k]);
                 }
             }
         });
@@ -458,7 +469,7 @@ export class Client {
         let local_dir:string|null = null;
         for (let iter of apps) {
             if (iter.inst === app.inst && iter.version === app.version) {
-                vscode.window.showInformationMessage("Already Downloaded");
+                //vscode.window.showInformationMessage("Already Downloaded");
                 local_dir = iter.local_dir;
                 iter.version = app.version;
             }
@@ -467,6 +478,9 @@ export class Client {
             local_dir = this.configuration.ConfigurationNames[this.configuration.CurrentConfiguration] + "." + app.inst;
             apps.push({inst: app.inst, version: app.version, local_dir: local_dir});
             conf.apps = apps;
+        } else {
+            // fs.unlinkSync(this.RootPath + "\\" + local_dir);
+            // vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
         }
 
         fs.mkdir(this.RootPath + "\\" + local_dir);
@@ -494,8 +508,7 @@ export class Client {
             }
         };
 
-        let cli = this;
-        this.httpGetRequest('/app/editor', options, function(body) {
+        this.httpGetRequest('/app/editor', options, (body) => {
             interface FileNode {
                 type: string;
                 id: string;
@@ -509,10 +522,10 @@ export class Client {
                     for (let child of node.children) {
                         console.log(child);
                         if (child.type === 'folder') {
-                                cli.realDownloadApplication(local_dir, inst, child.id)
+                                this.realDownloadApplication(local_dir, inst, child.id)
                                     .then(() => {
                                         console.log('download ' + child.id + ' finished');
-                                        fs.mkdir(cli.RootPath + "\\" + local_dir + child.id);
+                                        fs.mkdir(this.RootPath + "\\" + local_dir + child.id);
                                     });
                         }
                         if (child.type === 'file') {
@@ -529,7 +542,7 @@ export class Client {
             promises.push(util.make_promise().then(() => {
                 setTimeout(async ()=>{
                     for (let node of file_nodes) {
-                        cli.downloadFile(local_dir, inst, node.id);
+                        this.downloadFile(local_dir, inst, node.id);
                         await util.sleep(200);
                     }
                 }, 200);
@@ -550,16 +563,15 @@ export class Client {
             }
         };
 
-        let cli = this;
-        this.httpGetRequest('/app/editor', options, function(body) {
+        this.httpGetRequest('/app/editor', options, (body) => {
             interface FileContent {
                 content: string;
             }
 
             let fc: FileContent = Object.assign({}, JSON.parse(body));
             if (fc.content) {
-                console.log("write file", cli.RootPath + "\\" + local_dir + filepath);
-                fs.writeFileSync(cli.RootPath + "\\" + local_dir + filepath, fc.content);
+                console.log("write file", this.RootPath + "\\" + local_dir + filepath);
+                fs.writeFileSync(this.RootPath + "\\" + local_dir + filepath, fc.content);
             } else {
                 console.log("No file content found!");
             }
@@ -581,8 +593,10 @@ export class Client {
             }
         };
 
-        this.httpPostRequest('/app/editor', options, function(body) {
-            vscode.window.showInformationMessage("File upload ok");
+        this.httpPostRequest('/app/editor', options, (body) => {
+            if (this.logChannel) {
+                this.logChannel.appendLine(`File ${filepath} uploaded`);
+            }
         });
 
         return Promise.all(promises).then(() => undefined);

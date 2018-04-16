@@ -35,12 +35,12 @@ export class UdpConn {
         let obj: MSG = Object.assign([], JSON.parse(msg.toString()));
        
         if (obj.type === 'log') {
-            let channel = this.client.OutputChannel;
+            let channel = this.client.LogChannel;
             if (channel) {
                 channel.appendLine(`[${rinfo.address}] ${obj.data.timestamp} [${obj.data.level}] [${obj.data.process}] ${obj.data.content} `);
             }
         } else {
-            let channel = this.client.DebugChannel;
+            let channel = this.client.CommChannel;
             if (channel) {
                 channel.appendLine(`[${rinfo.address}] ${obj.data.ts} [${obj.data.dir}] [${obj.data.sn}] ${obj.data.data} `);
             }

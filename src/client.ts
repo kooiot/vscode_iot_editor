@@ -604,7 +604,7 @@ export class Client {
         let options = {
             form: {
                 app: inst,
-                operation: 'set_content',
+                operation: 'set_content_ex',
                 id: filepath,
                 text: content,
             }

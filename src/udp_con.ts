@@ -41,7 +41,14 @@ export class UdpConn {
             if (channel) {
                 channel.appendLine(`[${rinfo.address}] ${obj.data.timestamp} [${obj.data.level}] [${obj.data.process}] ${obj.data.content} `);
             }
-        } else {
+        } 
+        if (obj.type === 'event') {
+            let channel = this.client.LogChannel;
+            if (channel) {
+                channel.appendLine(`[${rinfo.address}] ${obj.data.timestamp} [${obj.data.type}] [${obj.data.app}] [${obj.data.level}] ${obj.data.info} ${obj.data.data}`);
+            }
+        } 
+        if (obj.type === 'comm') {
             let channel = this.client.CommChannel;
             if (channel) {
                 channel.appendLine(`[${rinfo.address}] ${obj.data.ts} [${obj.data.dir}] [${obj.data.sn}] ${obj.data.data} `);

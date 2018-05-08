@@ -45,7 +45,8 @@ export class UdpConn {
         if (obj.type === 'event') {
             let channel = this.client.LogChannel;
             if (channel) {
-                channel.appendLine(`[${rinfo.address}] ${obj.data.timestamp} [${obj.data.type}] [${obj.data.app}] [${obj.data.level}] ${obj.data.info} ${obj.data.data}`);
+                let data_data = JSON.stringify(obj.data.data)
+                channel.appendLine(`[${rinfo.address}] ${obj.data.timestamp} [${obj.data.type}] [${obj.data.app}] [${obj.data.level}] ${obj.data.info} ${data_data}`);
             }
         } 
         if (obj.type === 'comm') {

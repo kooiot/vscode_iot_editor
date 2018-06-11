@@ -260,7 +260,7 @@ export class Client {
     private fetchSysInfo(on_ready: () => void) {
         this.httpGetRequest("/sys/info", {}, (body)=> {
             interface SysInfo {
-                iot_sn: string;
+                ioe_sn: string;
                 using_beta: boolean;
             }
             let info: SysInfo = Object.assign({}, JSON.parse(body));
@@ -269,10 +269,10 @@ export class Client {
                 this.disconnectDevice();
                 return;
             }
-            if (info.iot_sn === this.device_sn) {
+            if (info.ioe_sn === this.device_sn) {
                 on_ready();
             } else {
-                ui.showIncorrectSN(info.iot_sn, this.device_sn).then((sn: string) => {
+                ui.showIncorrectSN(info.ioe_sn, this.device_sn).then((sn: string) => {
                     if (sn !== this.device_sn) {
                         this.updateDeviceSN(sn);
                     }

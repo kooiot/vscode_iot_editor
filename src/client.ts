@@ -51,6 +51,7 @@ export class Client {
     private device_sn:string = "";
     private device_apps:Application[] = [];
     private udpServer: UdpConn;
+    private udpInterval: NodeJS.Timer | undefined;
 
     // The "model" that is displayed via the UI (status bar).
     private model: ClientModel = {
@@ -302,12 +303,19 @@ export class Client {
         this.appendOutput('Request device forwarding log/comm to this computer');
         this.httpPostRequest("/settings", {form: {action: "debugger", option: "forward", value: "true"}}, (body) => {
             this.udpServer.startForward(this.device_ip);
+            this.udpInterval = setInterval(this.onUDPInterval, 30 * 1000);
         });
     }
     private stopUDPForward(): void {
         this.httpPostRequest("/settings", {form: {action: "debugger", option: "forward", value: "false"}}, (body) => {
-            this.udpServer.startForward(this.device_ip);
+            if (this.udpInterval !== undefined) {
+                clearInterval(this.udpInterval);
+            }
+            this.udpInterval = undefined;
         });
+    }
+    private onUDPInterval(): void {
+        this.udpServer.heartbeat(this.device_ip);
     }
 
     private disconnectDevice() {

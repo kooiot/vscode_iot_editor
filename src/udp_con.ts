@@ -69,6 +69,9 @@ export class UdpConn {
     public startForward(device_ip: string): void {
         this.udpServer.send("WHOISYOURDADDY", 7788, device_ip);
     }
+    public heartbeat(device_ip: string): void {
+        this.udpServer.send("WHOISYOURDADDY", 7788, device_ip);
+    }
 
     public dispose(): Thenable<void> {
         this.udpServer.close();

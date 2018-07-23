@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "IOT Editor for building application",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",
@@ -215,7 +215,7 @@
                     "command": "iot_editor.fileDownload"
                 },
                 {
-                    "when": "editorIsOpen && config.iot_editor.online == true && config.iot_editor.auto == false",
+                    "when": "editorIsOpen && config.iot_editor.online == true",
                     "command": "iot_editor.fileUpload"
                 },
                 {
@@ -230,7 +230,7 @@
                     "group": "navigation"
                 },
                 {
-                    "when": "config.iot_editor.online == true && config.iot_editor.auto == false",
+                    "when": "config.iot_editor.online == true",
                     "command": "iot_editor.fileUpload",
                     "group": "navigation"
                 },
@@ -252,7 +252,7 @@
                     "group": "1_modification"
                 },
                 {
-                    "when": "config.iot_editor.online == true && config.iot_editor.auto == false",
+                    "when": "config.iot_editor.online == true",
                     "command": "iot_editor.fileUpload",
                     "group": "1_modification"
                 },

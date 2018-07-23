@@ -403,7 +403,7 @@ export class Client {
 
     }
     public handleApplicationUploadCommand(): void {
-        
+        vscode.window.showWarningMessage("Application upload not implemented!");
     }
     public handleApplicationRestartCommand(doc: vscode.TextDocument): void {
         let abpath = path.relative(this.RootPath, doc.uri.fsPath);

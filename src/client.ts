@@ -303,7 +303,7 @@ export class Client {
         this.appendOutput('Request device forwarding log/comm to this computer');
         this.httpPostRequest("/settings", {form: {action: "debugger", option: "forward", value: "true"}}, (body) => {
             this.udpServer.startForward(this.device_ip);
-            this.udpInterval = setInterval(function(self) { self.onUDPInterval(); }, 30 * 1000, this);
+            this.udpInterval = setInterval(function(self) { self.udpServer.heartbeat(self.device_ip); }, 30 * 1000, this);
         });
     }
     private stopUDPForward(): void {
@@ -314,10 +314,6 @@ export class Client {
             this.udpInterval = undefined;
         });
     }
-    private onUDPInterval(): void {
-        this.udpServer.heartbeat(this.device_ip);
-    }
-
     private disconnectDevice() {
         this.appendOutput('Disconnect device....');
         this.stopUDPForward();

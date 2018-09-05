@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "IOT Editor for building application",
-    "version": "0.1.4",
+    "version": "0.2.0",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",
@@ -55,16 +55,6 @@
             {
                 "command": "iot_editor.aboutEditor",
                 "title": "About IOT Editor...",
-                "category": "IOT"
-            },
-            {
-                "command": "iot_editor.udpPing",
-                "title": "Ping UDP Port",
-                "category": "IOT"
-            },
-            {
-                "command": "iot_editor.udpForward",
-                "title": "Start UDP Forward",
                 "category": "IOT"
             },
             {
@@ -183,14 +173,6 @@
                     "command": "iot_editor.aboutEditor"
                 },
                 {
-                    "when": "config.iot_editor.debug == true",
-                    "command": "iot_editor.udpPing"
-                },
-                {
-                    "when": "config.iot_editor.debug == true",
-                    "command": "iot_editor.udpForward"
-                },
-                {
                     "when": "config.iot_editor.online == false",
                     "command": "iot_editor.connect"
                 },
@@ -290,6 +272,8 @@
     },
     "dependencies": {
         "@types/request": "^2.47.0",
-        "request": "^2.85.0"
+        "@types/ws": "^6.0.0",
+        "request": "^2.85.0",
+        "ws": "^6.0.0"
     }
 }

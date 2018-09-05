@@ -16,8 +16,6 @@ export function activate(context: vscode.ExtensionContext) {
     
     console.log('IOT Editor extension loaded!');
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.aboutEditor', aboutEditor));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.udpPing', udpPing));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.udpForward', udpForward));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.connect', deviceConnect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.disconnect', deviceDisconnect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationSelect', configurationSelect));
@@ -212,12 +210,6 @@ function fileUpload(): void {
 
 function aboutEditor(): void {
     vscode.window.showInformationMessage('About IOT Editor');
-}
-function udpPing(): void {
-    client.handleUDPPing();
-}
-function udpForward(): void {
-    client.startUDPForward();
 }
 
 export function isFolderOpen(): boolean {

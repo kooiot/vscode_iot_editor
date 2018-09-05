@@ -3,12 +3,11 @@
 import * as path from 'path';
 import * as fs from "fs";
 import * as vscode from 'vscode';
-import * as request from 'request';
 import * as util from "./util";
 import * as configs from "./configurations";
 import { UI, getUI } from './ui';
 import { DataBinding } from './dataBinding';
-import { UdpConn } from './udp_con';
+import { WsConn } from './ws_con';
 
 let ui: UI;
 
@@ -44,14 +43,11 @@ export class Client {
     private outputChannel: vscode.OutputChannel | undefined;
     private logChannel: vscode.OutputChannel | undefined;
     private commChannel: vscode.OutputChannel | undefined;
-    private http_requst = request.defaults({jar: true});
     private connected: boolean = false;
-    private device_ip: string = "";
-    private http_url_base: string = "";
+    private device_ws: string = "";
     private device_sn:string = "";
     private device_apps:Application[] = [];
-    private udpServer: UdpConn;
-    private udpInterval: NodeJS.Timer | undefined;
+    private ws_con: WsConn | undefined;
 
     // The "model" that is displayed via the UI (status bar).
     private model: ClientModel = {
@@ -128,8 +124,6 @@ export class Client {
 
             this.setupOutputHandlers();
             this.registerFileWatcher();
-
-            this.udpServer = new UdpConn(this, 7000);
         }
         catch(err) {
             vscode.window.showErrorMessage('Failed to open : ' + err.message);
@@ -188,45 +182,10 @@ export class Client {
             this.disposables.push(this.logChannel);
         }
     }
-    private appendOutput(log: string) {
+    public appendOutput(log: string) {
         if (this.outputChannel) {
             this.outputChannel.appendLine(log);
         }
-    }
-
-    private httpPostRequest(url: string, options: request.CoreOptions, onSuccess: (body: any) => void) {
-        this.http_requst.post(this.http_url_base + url, options, (e, r, body) => {
-            if (r && r.statusCode === 200) {
-                onSuccess(body);
-            } else {
-                this.appendOutput(`Failed on post url ${url}`);
-                if (body) {
-                    this.appendOutput(body);
-                } else {
-                    this.appendOutput(e.message);
-                }
-            }
-        });
-    }
-    private httpGetRequest(url: string, options: request.CoreOptions, onSuccess: (body: any) => void, onFailed: ((err:any) => void) | undefined = undefined)  {
-        this.http_requst.get(this.http_url_base + url, options, (e, r, body) => {
-            if (r && r.statusCode === 200) {
-                onSuccess(body);
-            } else {
-                this.appendOutput(`Failed on request url ${url}`);
-                if (body) {
-                    this.appendOutput(body);
-                    if (onFailed) {
-                        onFailed(body);
-                    }
-                } else {
-                    this.appendOutput(e.message);
-                    if (onFailed) {
-                        onFailed(e.message);
-                    }
-                }
-            }
-        });
     }
 
     private connectDevice() {
@@ -235,12 +194,11 @@ export class Client {
 
         let dev: configs.Device | undefined = conf.device;
         if (dev) {
-            let ip: string = dev.ip ? dev.ip : "127.0.0.1";
+            let ws: string = dev.ws ? dev.ws : "ws://127.0.0.1:8818";
             let sn: string = dev.sn ? dev.sn : "IDIDIDIDID";
             let user: string = dev.user ? dev.user : "admin";
             let password: string = dev.password ? dev.password : "admin1";
-            let url_base = "http://" + ip + ":8808";
-            if (this.http_url_base === url_base && this.device_sn === sn) {
+            if (this.device_ws === ws && this.device_sn === sn) {
                 this.appendOutput("Device SN/IP are same!");
                 return;
             }
@@ -249,79 +207,48 @@ export class Client {
                 this.disconnectDevice();
             }
             
-            this.device_ip = ip;
-            this.http_url_base = "http://" + ip + ":8808";
+            this.device_ws = ws;
             this.device_sn = sn;
 
-            this.fetchSysInfo(() => {
-                this.realConnectDevice(user, password);
-            });
+            this.ws_con = new WsConn(this, ws, user, password);
         }
     }
-    private fetchSysInfo(on_ready: () => void) {
-        this.httpGetRequest("/sys/info", {}, (body)=> {
-            interface SysInfo {
-                ioe_sn: string;
-                using_beta: boolean;
-            }
-            let info: SysInfo = Object.assign({}, JSON.parse(body));
-            if (!info.using_beta) {
-                vscode.window.showErrorMessage("Device is not in beta mode!!!");
-                this.disconnectDevice();
-                return;
-            }
-            if (info.ioe_sn === this.device_sn) {
-                on_ready();
-            } else {
-                ui.showIncorrectSN(info.ioe_sn, this.device_sn).then((sn: string) => {
-                    if (sn !== this.device_sn) {
-                        this.updateDeviceSN(sn);
-                    }
+    public on_device_sn(dev_sn: string, on_ready: () => void) {
+        if (dev_sn !== this.device_sn) {
+            ui.showIncorrectSN(dev_sn, this.device_sn).then((sn: string) => {
+                if (sn !== this.device_sn) {
                     this.disconnectDevice();
-                });
-            }
-        }, (err) => {
-            vscode.window.showErrorMessage(`Cannot fetch device information from device ${this.device_ip}`);
-        });
+                } else {
+                    this.updateDeviceSN(sn);
+                    on_ready();
+                }
+            });
+        } else {
+            on_ready();
+        }
     }
-    private realConnectDevice(user:string, password:string) {
-        console.log('[Client] HTTP\t', this.http_url_base);
-        this.httpPostRequest("/user/login", {form: {username:user, password:password}}, (body) => {
-            vscode.window.showInformationMessage(`Login to device ${this.device_ip} completed`);
-            if (this.outputChannel) {
-                this.outputChannel.appendLine(`Login to device ${this.device_ip} completed`);
-                this.outputChannel.show();
-            }
-            vscode.workspace.getConfiguration('iot_editor').update('online', true);
-            vscode.workspace.getConfiguration('iot_editor').update('config', this.configuration.CurrentConfiguration);
-            this.connected = true;
-            this.startUDPForward();
+    public on_login(result: boolean, message: string) {
+        if (result === true) {
+            this.appendOutput('Login successfully!!');
             this.handleApplicationFetch();
-        });
+            vscode.workspace.getConfiguration('iot_editor').update('online', true);
+        } else {
+            this.appendOutput(`Login failed: ${message}`);
+            this.disconnectDevice();
+        }
     }
-    public startUDPForward(): void {
-        this.appendOutput('Request device forwarding log/comm to this computer');
-        this.httpPostRequest("/settings", {form: {action: "debugger", option: "forward", value: "true"}}, (body) => {
-            this.udpServer.startForward(this.device_ip);
-            this.udpInterval = setInterval(function(self) { self.udpServer.heartbeat(self.device_ip); }, 30 * 1000, this);
-        });
-    }
-    private stopUDPForward(): void {
-        this.httpPostRequest("/settings", {form: {action: "debugger", option: "forward", value: "false"}}, (body) => {
-            if (this.udpInterval !== undefined) {
-                clearInterval(this.udpInterval);
-            }
-            this.udpInterval = undefined;
-        });
+    public on_ws_message( code: string, data: any) {
+        this.appendOutput(`WebSocket message: ${code} ${data}`);
     }
     private disconnectDevice() {
         this.appendOutput('Disconnect device....');
-        this.stopUDPForward();
+        if (this.ws_con !== undefined) {
+            this.ws_con.close();
+        }
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
         this.connected = false;
         this.device_apps = [];
-        this.device_ip = "";
-        this.http_url_base = "";
+        this.device_ws = "";
         this.device_sn = "";
     }
     
@@ -366,11 +293,11 @@ export class Client {
 
     public handleApplicationCreateCommand(): void {
         ui.showApplicationCreate().then(( app: Application|undefined) => {
-            if (!app) {
+            if (!app || !this.ws_con) {
                 return;
             }
-            this.httpPostRequest("/app/new", {form:{inst:app.inst, app:app.name}}, (body) => {
-                if (body === "Application creation is done!") {
+            this.ws_con.app_new(app.name, app.inst, (code, data) => {
+                if (data.result === true) {
                     app.version = 0;
                     app.islocal = 1;
                     this.device_apps.push(app);
@@ -378,8 +305,9 @@ export class Client {
                         this.downloadApplication(app);
                     }, 1000);
                 } else {
-                    vscode.window.showErrorMessage(body);
+                    vscode.window.showErrorMessage(data.message);
                 }
+                return true;
             });
         });
     }
@@ -438,9 +366,12 @@ export class Client {
         console.log('Start Application', inst);
         let promises: Thenable<void>[] = [];
 
-        this.httpPostRequest('/app/start', {form: {inst:inst, from_web:"true"}}, (body) => {
-            vscode.window.showInformationMessage(body);
-        });
+        if (this.ws_con !== undefined) {
+            this.ws_con.app_start(inst, (code, data) => {
+                vscode.window.showInformationMessage(data.message);
+                return true;
+            });
+        }
 
         return Promise.all(promises).then(() => undefined);
     }
@@ -448,9 +379,12 @@ export class Client {
         console.log('Stop Application', inst);
         let promises: Thenable<void>[] = [];
 
-        this.httpPostRequest('/app/stop', {form: {inst:inst, from_web:"true"}}, (body) => {
-            vscode.window.showInformationMessage(body);
-        });
+        if (this.ws_con !== undefined) {
+            this.ws_con.app_stop(inst, "stop from vscode", (code, data) => {
+                vscode.window.showInformationMessage(data.message);
+                return true;
+            });
+        }
 
         return Promise.all(promises).then(() => undefined);
     }
@@ -464,22 +398,21 @@ export class Client {
     }
     private handleApplicationFetch(): void {
         console.log('[Client] handleApplicationFetch');
-        this.httpGetRequest("/app/list", {}, (body) => {
-            interface AppList {
-                apps:{ [key: string]: Application; };
-                using_beta: boolean;
-            }
 
-            let list: AppList = Object.assign({}, JSON.parse(body));
-            if (list.using_beta === true) {
-                for(let k in list.apps) {
-                    if (!list.apps[k].inst) {
-                        list.apps[k].inst = k;
+        if (this.ws_con !== undefined) {
+            this.ws_con.app_list((code, data) => {
+                interface AppList { [key: string]: Application; };
+    
+                let list: AppList = Object.assign({}, data);
+                for(let k in list) {
+                    if (!list[k].inst) {
+                        list[k].inst = k;
                     }
-                    this.device_apps.push(list.apps[k]);
+                    this.device_apps.push(list[k]);
                 }
-            }
-        });
+                return true;
+            });
+        }
     }
     private downloadApplication(app: Application) {
         let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
@@ -529,46 +462,53 @@ export class Client {
             }
         };
 
-        this.httpGetRequest('/app/editor', options, (body) => {
-            interface FileNode {
-                type: string;
-                id: string;
-                text: string;
-                children: FileNode[] | boolean;
-            }
-            let nodes: FileNode[] = Object.assign([], JSON.parse(body));
-            let file_nodes: FileNode[] = [];
-            for (let node of nodes) {
-                if (typeof(node.children) !== 'boolean') {
-                    for (let child of node.children) {
-                        console.log(child);
-                        if (child.type === 'folder') {
-                                this.realDownloadApplication(local_dir, inst, child.id)
-                                    .then(() => {
-                                        console.log('download ' + child.id + ' finished');
-                                        fs.mkdir(this.RootPath + "\\" + local_dir + child.id);
-                                    });
-                        }
-                        if (child.type === 'file') {
-                            console.log('file:', child.id);
-                            file_nodes.push(child);
-                        }
-                    }
-                } else {
-                    console.log('file:', node.id);
-                    file_nodes.push(node);
+        if (this.ws_con){
+            this.ws_con.editor_get(options.qs, (code, data) => {
+                if (data.result !== true) {
+                    this.appendOutput(`Download application failed! ${data.message}`);
+                    return true;
                 }
-            }
-            
-            promises.push(util.make_promise().then(() => {
-                setTimeout(async ()=>{
-                    for (let node of file_nodes) {
-                        this.downloadFile(local_dir, inst, node.id);
-                        await util.sleep(200);
+                interface FileNode {
+                    type: string;
+                    id: string;
+                    text: string;
+                    children: FileNode[] | boolean;
+                }
+                let nodes: FileNode[] = Object.assign([], data.content);
+                let file_nodes: FileNode[] = [];
+                for (let node of nodes) {
+                    if (typeof(node.children) !== 'boolean') {
+                        for (let child of node.children) {
+                            console.log(child);
+                            if (child.type === 'folder') {
+                                    this.realDownloadApplication(local_dir, inst, child.id)
+                                        .then(() => {
+                                            console.log('download ' + child.id + ' finished');
+                                            fs.mkdir(this.RootPath + "\\" + local_dir + child.id);
+                                        });
+                            }
+                            if (child.type === 'file') {
+                                console.log('file:', child.id);
+                                file_nodes.push(child);
+                            }
+                        }
+                    } else {
+                        console.log('file:', node.id);
+                        file_nodes.push(node);
                     }
-                }, 200);
-            }));
-        });
+                }
+                
+                promises.push(util.make_promise().then(() => {
+                    setTimeout(async ()=>{
+                        for (let node of file_nodes) {
+                            this.downloadFile(local_dir, inst, node.id);
+                            await util.sleep(200);
+                        }
+                    }, 200);
+                }));
+                return true;
+            });
+        }
 
         return Promise.all(promises).then(() => undefined);
     }
@@ -584,19 +524,26 @@ export class Client {
             }
         };
 
-        this.httpGetRequest('/app/editor', options, (body) => {
-            interface FileContent {
-                content: string;
-            }
+        if (this.ws_con){
+            this.ws_con.editor_get(options.qs, (code, data) => {
+                if (data.result !== true) {
+                    this.appendOutput(`Download file failed! ${data.message}`);
+                    return true;
+                }
+                interface FileContent {
+                    content: string;
+                }
 
-            let fc: FileContent = Object.assign({}, JSON.parse(body));
-            if (fc.content) {
-                console.log("write file", this.RootPath + "\\" + local_dir + filepath);
-                fs.writeFileSync(this.RootPath + "\\" + local_dir + filepath, fc.content);
-            } else {
-                console.log("No file content found!");
-            }
-        });
+                let fc: FileContent = Object.assign({}, data.content);
+                if (fc.content) {
+                    console.log("write file", this.RootPath + "\\" + local_dir + filepath);
+                    fs.writeFileSync(this.RootPath + "\\" + local_dir + filepath, fc.content);
+                } else {
+                    console.log("No file content found!");
+                }
+                return true;
+            });
+        }
 
         return Promise.all(promises).then(() => undefined);
     }
@@ -614,11 +561,16 @@ export class Client {
             }
         };
 
-        this.httpPostRequest('/app/editor', options, (body) => {
-            if (this.logChannel) {
-                this.logChannel.appendLine(`File ${filepath} uploaded`);
-            }
-        });
+        if (this.ws_con){
+            this.ws_con.editor_post(options.form, (code, data) => {
+                if (data.result !== true) {
+                    this.appendOutput(`File ${filepath} upload failed! ${data.message}`);
+                } else {
+                    this.appendOutput(`File ${filepath} uploaded`);
+                }
+                return true;
+            });
+        }
 
         return Promise.all(promises).then(() => undefined);
     }
@@ -668,10 +620,6 @@ export class Client {
         } else {
             vscode.window.showWarningMessage("Application instance is not found!");
         }
-    }
-
-    public handleUDPPing(): void {
-        this.udpServer.ping(this.device_ip);
     }
 
     public onInterval(): void {

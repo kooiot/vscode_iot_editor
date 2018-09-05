@@ -14,7 +14,7 @@ let defaultSettings: string = `{
         {
             "name": "Device",
             "device": {
-                "ip": "192.168.1.1",
+                "ws": "ws://192.168.0.245:8818",
                 "sn": "",
                 "user": "admin",
                 "password": "admin1"
@@ -27,7 +27,7 @@ let defaultSettings: string = `{
 `;
 
 export interface Device {
-    ip?: string;
+    ws?: string;
     sn?: string;
     user?: string;
     password?: string;

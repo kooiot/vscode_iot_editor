@@ -38,3 +38,7 @@ Initial release of vscode extension for FreeeIOE
 ### 0.2.0
 
 Using websocket instead of http restful api
+
+### 0.2.1
+
+Fixed interval reconnection issue.

@@ -21,6 +21,7 @@ export class WsConn {
     private websocket: WebSocket | undefined;
     private msg_id: number = 0;
     private callback_map = new Map<number, WSCallback>();
+    private reconnect_timer: NodeJS.Timer | undefined;
 
 
     constructor( client: Client, address: string, user: string, password: string) {
@@ -100,8 +101,13 @@ export class WsConn {
     private on_ws_close() {
         this.client.appendOutput("WebSocket connection is closed from " + this.address);
         this.websocket = undefined;
+
+        if (this.reconnect_timer) {
+            return;
+        }
         
-        setTimeout(async ()=>{
+        this.reconnect_timer = setTimeout(async ()=>{
+            this.reconnect_timer = undefined;
             this.connect();
         }, 3000);
     }
@@ -218,8 +224,11 @@ export class WsConn {
     }
 
     public close() {
+        if (this.reconnect_timer) {
+            clearTimeout(this.reconnect_timer);
+        }
         if (this.websocket) {
-         this.websocket.close();
+            this.websocket.close();
         }
     }
     

@@ -248,6 +248,7 @@ export class Client {
         this.appendOutput('Disconnect device....');
         if (this.ws_con !== undefined) {
             this.ws_con.close();
+            this.ws_con = undefined;
         }
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
         this.connected = false;

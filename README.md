@@ -42,3 +42,7 @@ Using websocket instead of http restful api
 ### 0.2.1
 
 Fixed interval reconnection issue.
+
+### 0.2.2
+
+Fixed log confusion about connection.

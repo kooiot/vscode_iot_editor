@@ -43,7 +43,6 @@ export class Client {
     private outputChannel: vscode.OutputChannel | undefined;
     private logChannel: vscode.OutputChannel | undefined;
     private commChannel: vscode.OutputChannel | undefined;
-    private connected: boolean = false;
     private device_ws: string = "";
     private device_sn: string = "";
     private device_user: string = "";
@@ -115,6 +114,8 @@ export class Client {
         try {
             let conf = vscode.workspace.getConfiguration('iot_editor').get<number>('config');
             if (!conf) { conf = -1;}
+
+            this.setupOutputHandlers();
             
             this.configuration = new configs.EditorProperties(this.RootPath, conf);
             this.configuration.ConfigurationsChanged((e) => this.onConfigurationsChanged(e));
@@ -124,7 +125,6 @@ export class Client {
             let defaults = {applicationPath: ""};
             this.configuration.ApplicationDefaults = defaults;
 
-            this.setupOutputHandlers();
             this.registerFileWatcher();
         }
         catch(err) {
@@ -202,13 +202,8 @@ export class Client {
             if (this.device_ws === ws && this.device_sn === sn && this.device_user === user && this.device_password === password) {
                 return;
             }
-
-            this.appendOutput('Connect device....');
-                
-            if (this.connected) {
-                this.disconnectDevice();
-            }
-            
+            this.disconnectDevice();
+            this.appendOutput('Connect device....');    
             this.device_ws = ws;
             this.device_sn = sn;
             this.device_user = user;
@@ -221,10 +216,10 @@ export class Client {
         if (dev_sn !== this.device_sn) {
             ui.showIncorrectSN(dev_sn, this.device_sn).then((sn: string) => {
                 if (sn !== this.device_sn) {
-                    this.disconnectDevice();
-                } else {
                     this.updateDeviceSN(sn);
                     on_ready();
+                } else {
+                    this.disconnectDevice();
                 }
             });
         } else {
@@ -232,29 +227,33 @@ export class Client {
         }
     }
     public on_login(result: boolean, message: string) {
+        vscode.workspace.getConfiguration('iot_editor').update('online', result);
         if (result === true) {
             this.appendOutput('Login successfully!!');
             this.handleApplicationFetch();
-            vscode.workspace.getConfiguration('iot_editor').update('online', true);
         } else {
             this.appendOutput(`Login failed: ${message}`);
             this.disconnectDevice();
+        }
+    }
+    public on_disconnected(ws_con: WsConn) {
+        if (this.ws_con === ws_con) {
+            vscode.workspace.getConfiguration('iot_editor').update('online', false);
         }
     }
     public on_ws_message( code: string, data: any) {
         this.appendOutput(`WebSocket message: ${code} ${data}`);
     }
     private disconnectDevice() {
-        this.appendOutput('Disconnect device....');
-        if (this.ws_con !== undefined) {
-            this.ws_con.close();
-            this.ws_con = undefined;
-        }
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
-        this.connected = false;
         this.device_apps = [];
         this.device_ws = "";
         this.device_sn = "";
+        if (this.ws_con !== undefined) {
+            this.appendOutput('Disconnect device....');
+            this.ws_con.close();
+            this.ws_con = undefined;
+        }
     }
     
     private onConfigurationsChanged(configurations: configs.Configuration[]): void {
@@ -400,6 +399,7 @@ export class Client {
             device.sn = sn;
         }
         this.configuration.saveToFile();
+        this.device_sn = sn;
     }
     private handleApplicationFetch(): void {
         console.log('[Client] handleApplicationFetch');
@@ -601,6 +601,9 @@ export class Client {
     }
     public handleFileDownloadCommand(doc: vscode.TextDocument): void {
         let abpath = path.relative(this.RootPath, doc.uri.fsPath);
+        if (path.dirname(abpath) === '.vscode') {
+            return;
+        }
         let app = this.getApplicationFromFilePath(abpath);
         if (app) {
             // vscode.commands.executeCommand('workbench.action.closeActiveEditor');
@@ -613,6 +616,9 @@ export class Client {
     }
     public handleFileUploadCommand(doc: vscode.TextDocument): void {
         let abpath = path.relative(this.RootPath, doc.uri.fsPath);
+        if (path.dirname(abpath) === '.vscode') {
+            return;
+        }
         let app = this.getApplicationFromFilePath(abpath);
         if (app) {
             let fpath = "/" + path.relative(app.local_dir, abpath);

@@ -224,32 +224,32 @@
             ],
             "editor/context": [
                 {
-                    "when": "config.iot_editor.online == false",
+                    "when": "editorLangId != 'Log' && config.iot_editor.online == false",
                     "command": "iot_editor.connect",
                     "group": "1_modification"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
                     "command": "iot_editor.fileDownload",
                     "group": "1_modification"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
                     "command": "iot_editor.fileUpload",
                     "group": "1_modification"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
                     "command": "iot_editor.applicationRestart",
                     "group": "2_iot_editor"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
                     "command": "iot_editor.applicationStart",
                     "group": "2_iot_editor"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
                     "command": "iot_editor.applicationStop",
                     "group": "2_iot_editor"
                 }

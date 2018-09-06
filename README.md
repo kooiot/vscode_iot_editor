@@ -1,6 +1,6 @@
 # IOT Editor README
 
-VSCode extension for editing IOT Application
+VSCode extension for editing FreeIOE Application with connected device
 
 ## Features
 
@@ -31,14 +31,10 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 Users appreciate release notes as you update your extension.
 
-### 1.0.0
+### 0.1.0
 
-Initial release of ...
+Initial release of vscode extension for FreeeIOE
 
-### 1.0.1
+### 0.2.0
 
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+Using websocket instead of http restful api

@@ -45,8 +45,10 @@ export class Client {
     private commChannel: vscode.OutputChannel | undefined;
     private connected: boolean = false;
     private device_ws: string = "";
-    private device_sn:string = "";
-    private device_apps:Application[] = [];
+    private device_sn: string = "";
+    private device_user: string = "";
+    private device_password: string = "";
+    private device_apps: Application[] = [];
     private ws_con: WsConn | undefined;
 
     // The "model" that is displayed via the UI (status bar).
@@ -189,7 +191,6 @@ export class Client {
     }
 
     private connectDevice() {
-        this.appendOutput('Connect device....');
         let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
 
         let dev: configs.Device | undefined = conf.device;
@@ -198,10 +199,11 @@ export class Client {
             let sn: string = dev.sn ? dev.sn : "IDIDIDIDID";
             let user: string = dev.user ? dev.user : "admin";
             let password: string = dev.password ? dev.password : "admin1";
-            if (this.device_ws === ws && this.device_sn === sn) {
-                this.appendOutput("Device SN/IP are same!");
+            if (this.device_ws === ws && this.device_sn === sn && this.device_user === user && this.device_password === password) {
                 return;
             }
+
+            this.appendOutput('Connect device....');
                 
             if (this.connected) {
                 this.disconnectDevice();
@@ -209,6 +211,8 @@ export class Client {
             
             this.device_ws = ws;
             this.device_sn = sn;
+            this.device_user = user;
+            this.device_password = password;
 
             this.ws_con = new WsConn(this, ws, user, password);
         }

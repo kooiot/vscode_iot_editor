@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "IOT Editor for building application",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",

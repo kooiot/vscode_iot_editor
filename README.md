@@ -46,3 +46,8 @@ Fixed interval reconnection issue.
 ### 0.2.2
 
 Fixed log confusion about connection.
+
+### 0.2.3
+
+Update extension description and icon image.
+

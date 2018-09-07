@@ -1,8 +1,8 @@
 {
     "name": "iot-editor",
     "displayName": "IOT Editor",
-    "description": "IOT Editor for building application",
-    "version": "0.2.2",
+    "description": "Developing application with connected FreeIOE device",
+    "version": "0.2.3",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",
@@ -19,7 +19,9 @@
     "categories": [
         "Other"
     ],
+    "icon": "images/icon.png",
     "activationEvents": [
+		"onView:iotExplorer",
         "onCommand:iot_editor.configurationEdit",
         "workspaceContains:**/iot_editor_properties.json"
     ],
@@ -164,7 +166,23 @@
                     "light": "./media/icon/upload.svg",
                     "dark": "./media/icon/upload_inverse.svg"
                 }
-            }
+            },
+            {
+				"command": "IOTExplorer.refresh",
+				"title": "Refresh",
+				"icon": {
+					"light": "resources/light/refresh.svg",
+					"dark": "resources/dark/refresh.svg"
+				}
+			},
+			{
+				"command": "IOTExplorer.openFtpResource",
+				"title": "Open FTP Resource"
+			},
+			{
+				"command": "IOTExplorer.revealResource",
+				"title": "Reveal in FTP View"
+			}
         ],
         "menus": {
             "commandPalette": [
@@ -205,6 +223,13 @@
                     "command": "iot_editor.connect"
                 }
             ],
+			"view/title": [
+				{
+					"command": "IOTExplorer.refresh",
+					"when": "view == IOTExplorer",
+					"group": "navigation"
+				}
+			],
             "editor/title": [
                 {
                     "when": "config.iot_editor.online == true",
@@ -252,6 +277,31 @@
                     "when": "editorLangId != 'Log' && config.iot_editor.online == true",
                     "command": "iot_editor.applicationStop",
                     "group": "2_iot_editor"
+                }
+            ]
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "iot_explorer",
+                    "title": "FreeIOE Explorer",
+                    "icon": "images/freeioe_explorer.svg"
+                }
+            ]
+        },
+        "views": {
+            "iot_explorer": [
+                {
+                    "id": "IOTExplorer",
+                    "name": "FreeIOE Explorer"
+                },
+                {
+                    "id": "iot-applications",
+                    "name": "Applications"
+                },
+                {
+                    "id": "iot-events",
+                    "name": "Events"
                 }
             ]
         }

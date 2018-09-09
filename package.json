@@ -10,7 +10,7 @@
     },
     "license": "MIT",
     "engines": {
-        "vscode": "^1.21.0"
+        "vscode": "^1.27.0"
     },
     "repository": {
         "type": "git",
@@ -21,7 +21,8 @@
     ],
     "icon": "images/icon.png",
     "activationEvents": [
-        "onView:iotExplorer",
+        "onView:IOTExplorer",
+        "onView:IOTViewer",
         "onCommand:iot_editor.configurationEdit",
         "workspaceContains:**/iot_editor_properties.json"
     ],
@@ -176,11 +177,27 @@
                 }
             },
             {
-                "command": "IOTExplorer.openFtpResource",
-                "title": "Open FTP Resource"
+                "command": "IOTExplorer.openFile",
+                "title": "Open IOT Application File"
             },
             {
                 "command": "IOTExplorer.revealResource",
+                "title": "Reveal in FTP View"
+            },
+            {
+                "command": "IOTViewer.refresh",
+                "title": "Refresh",
+                "icon": {
+                    "light": "./media/icon/refresh.svg",
+                    "dark": "./media/icon/refresh_inverse.svg"
+                }
+            },
+            {
+                "command": "IOTViewer.openFile",
+                "title": "Open IOT Application File"
+            },
+            {
+                "command": "IOTViewer.revealResource",
                 "title": "Reveal in FTP View"
             }
         ],
@@ -227,6 +244,11 @@
                 {
                     "command": "IOTExplorer.refresh",
                     "when": "view == IOTExplorer",
+                    "group": "navigation"
+                },
+                {
+                    "command": "IOTViewer.refresh",
+                    "when": "view == IOTViewer",
                     "group": "navigation"
                 }
             ],
@@ -296,8 +318,8 @@
                     "name": "FreeIOE Explorer"
                 },
                 {
-                    "id": "iot-applications",
-                    "name": "Applications"
+                    "id": "IOTViewer",
+                    "name": "FreeIOE Viewer"
                 },
                 {
                     "id": "iot-events",

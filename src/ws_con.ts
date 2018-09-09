@@ -177,7 +177,11 @@ export class WsConn {
             data: data
         };
         if (this.websocket) {
-            return this.websocket.send(JSON.stringify(msg), {mask: true}, cb);
+            return this.websocket.send(JSON.stringify(msg), {mask: true}, (err: Error | undefined) => {
+                if (err && cb) {
+                    cb(err);
+                }
+            });
         }
         return false;
     }

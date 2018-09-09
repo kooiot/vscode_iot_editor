@@ -23,6 +23,13 @@ export interface ApplicationFileNode {
     children: ApplicationFileNode[] | boolean;
 }
 
+export interface IOTFileStat {
+    mode: string; // file, directory,link,socket,named pipe,char device,block device or other
+    access: number; 
+    modification: number;
+    size: number;
+}
+
 export class WSClient extends events.EventEmitter {
     private disposables: vscode.Disposable[] = [];
     private device_ws: string = "";
@@ -135,6 +142,7 @@ export class WSClient extends events.EventEmitter {
                     e('Error while create application: ' + data.message);
                 }
             }, (reason) => {
+                this.appendOutput(reason);
                 e(reason);
             });
         });
@@ -146,10 +154,17 @@ export class WSClient extends events.EventEmitter {
             return this.stop_app(inst, "Restart Application").then((result)=> {
                 if (result) {
                     setTimeout(async ()=>{
-                        this.start_app(inst);
+                        this.start_app(inst).then( (result) => {
+                            c(result);
+                        }, (reason) => {
+                            e(reason);
+                        });
                     }, 1000);
+                } else {
+                    e('Failed to stop application');
                 }
             }, (reason) => {
+                this.appendOutput(reason);
                 e(reason);
             });
         });
@@ -165,6 +180,7 @@ export class WSClient extends events.EventEmitter {
                     e('Error while create application: ' + data.message);
                 }
             }, (reason) => {
+                this.appendOutput(reason);
                 e(reason);
             });
         });
@@ -180,6 +196,7 @@ export class WSClient extends events.EventEmitter {
                     e('Error while create application: ' + data.message);
                 }
             }, (reason) => {
+                this.appendOutput(reason);
                 e(reason);
             });
         });
@@ -205,6 +222,7 @@ export class WSClient extends events.EventEmitter {
                 this.device_apps = apps;
                 c(apps);
             }, (reason) => {
+                this.appendOutput(reason);
                 e(reason);
             });
         });
@@ -254,6 +272,7 @@ export class WSClient extends events.EventEmitter {
                 }
                 c(nodes);
             }, (reason) => {
+                this.appendOutput(reason);
                 e(reason);
             });
         });
@@ -283,6 +302,7 @@ export class WSClient extends events.EventEmitter {
                     e("No file content found!");
                 }
             }, (reason) => {
+                this.appendOutput(reason);
                 e(reason);
             });
         });
@@ -300,17 +320,107 @@ export class WSClient extends events.EventEmitter {
                 let data = msg.data;
                 if (data.result !== true) {
                     this.appendOutput(`File ${filepath} upload failed! ${data.message}`);
-                    c(false);
                 } else {
                     this.appendOutput(`File ${filepath} uploaded`);
-                    c(true);
                 }
-                return true;
+                c(data.result);
             }, (reason) => {
                 this.appendOutput(reason);
-                c(false);
+                e(reason);
             });
         });
+    }
+    
+    public rename(inst: string, old_path: string, new_path: string) : Thenable<boolean> {
+        this.appendOutput(`Rename name from ${old_path} to ${new_path}`);
+        return new Promise((c, e) => {
+            let qs = {
+                app: inst,
+                operation: 'rename_node',
+                id: old_path,
+                text: new_path,
+            };
+            this.ws_con.editor_get(qs).then((msg) => {
+                let data = msg.data;
+                if (data.result !== true) {
+                    this.appendOutput(`Rename node from ${old_path} to ${new_path} failed! ${data.message}`);
+                } else {
+                    this.appendOutput(`Rename node from ${old_path} to ${new_path} successed`);
+                }
+                c(data.result);
+            }, (reason) => {
+                this.appendOutput(reason);
+                e(reason);
+            });
+        });
+    }
+    
+    public delete(inst: string, path: string) : Thenable<boolean> {
+        this.appendOutput(`Delete node ${path}`);
+        return new Promise((c, e) => {
+            let qs = {
+                app: inst,
+                operation: 'rename_node',
+                id: path
+            };
+            this.ws_con.editor_get(qs).then((msg) => {
+                let data = msg.data;
+                if (data.result !== true) {
+                    this.appendOutput(`Delete node ${path} failed! ${data.message}`);
+                } else {
+                    this.appendOutput(`Delete node ${path} successed`);
+                }
+                c(data.result);
+            }, (reason) => {
+                this.appendOutput(reason);
+                e(reason);
+            });
+        });
+    }
+    
+    // type: file/directory
+    public create(inst: string, path: string, type: string) : Thenable<boolean> {
+        this.appendOutput(`Create folder ${path}`);
+        return new Promise((c, e) => {
+            let qs = {
+                app: inst,
+                operation: 'create_node',
+                id: path,
+                type: type
+            };
+            this.ws_con.editor_get(qs).then((msg) => {
+                let data = msg.data;
+                if (data.result !== true) {
+                    this.appendOutput(`Create folder ${path} failed! ${data.message}`);
+                } else {
+                    this.appendOutput(`Create folder ${path} successed`);
+                }
+                c(data.result);
+            }, (reason) => {
+                this.appendOutput(reason);
+                e(reason);
+            });
+        });
+    }
+
+    public stat(inst: string, path: string) : Thenable<IOTFileStat> {
+        this.appendOutput(`Stat path ${path}`);
+        return new Promise((c, e) => {
+            let qs = {
+                app: inst,
+                operation: 'stat_node',
+                id: path
+            };
+            this.ws_con.editor_get(qs).then((msg) => {
+                let data = msg.data;
+                let stat: IOTFileStat = Object.assign({}, data.content);
+                c(stat);
+            }, (reason) => {
+                this.appendOutput(reason);
+                e(reason);
+            });
+        });
+
     }
 
     public dispose(): Thenable<void> {

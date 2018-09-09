@@ -5,9 +5,9 @@ import * as fs from "fs";
 import * as vscode from 'vscode';
 import * as util from "./util";
 import * as configs from "./configurations";
+import * as freeioe_client  from './freeioe_client';
 import { UI, getUI } from './ui';
 import { DataBinding } from './dataBinding';
-import { WsConn } from './ws_con';
 
 let ui: UI;
 
@@ -22,18 +22,6 @@ interface ClientModel {
     activeConfigName: DataBinding<string>;
 }
 
-
-export interface Application {
-    inst: string;
-    name: string;
-    version: number;
-    conf?: string;
-    auto?: number;
-    islocal?: number;
-    sn: string;
-    running: boolean;
-}
-
 export class Client {
     private disposables: vscode.Disposable[] = [];
     private configuration: configs.EditorProperties;
@@ -43,12 +31,13 @@ export class Client {
     private outputChannel: vscode.OutputChannel | undefined;
     private logChannel: vscode.OutputChannel | undefined;
     private commChannel: vscode.OutputChannel | undefined;
-    private device_ws: string = "";
-    private device_sn: string = "";
-    private device_user: string = "";
-    private device_password: string = "";
-    private device_apps: Application[] = [];
-    private ws_con: WsConn | undefined;
+
+    private device_host: string = "";
+    private device_port: number = 8818;
+    private device_sn: string | undefined;
+    private device_user: string | undefined;
+    private device_password: string | undefined;
+    private ws_client: freeioe_client.WSClient | undefined;
 
     // The "model" that is displayed via the UI (status bar).
     private model: ClientModel = {
@@ -81,6 +70,9 @@ export class Client {
     }
     public get CommChannel() : vscode.OutputChannel | undefined {
         return this.commChannel;
+    }
+    public getWSHost() : string {
+        return `${this.device_host}:${this.device_port}`;
     }
 
     private getName(workspaceFolder?: vscode.WorkspaceFolder): string {
@@ -189,70 +181,95 @@ export class Client {
             this.outputChannel.appendLine(log);
         }
     }
+    private appendLog(log: string) {
+        if (this.logChannel) {
+            this.logChannel.appendLine(log);
+        }
+    }
+    private appendCom(log: string) {
+        if (this.commChannel) {
+            this.commChannel.appendLine(log);
+        }
+    }
+    public get_client() : Thenable<freeioe_client.WSClient> {
+        return new Promise((c, e) => {
+            let client = this.ws_client;
+            if (!client) {
+                e(`Client is not exists!`);
+                return;
+            }
+            if (!client.is_connected()) {
+                client.once('ready', () => {
+                    c(client);
+                });
+                
+                client.on('error', (message : string) => {
+                    e('Error while connecting: ' + message);
+                });
+            }
+
+			c(client);
+		});
+    }
 
     private connectDevice() {
         let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
 
         let dev: configs.Device | undefined = conf.device;
         if (dev) {
-            let ws: string = dev.ws ? dev.ws : "ws://127.0.0.1:8818";
-            let sn: string = dev.sn ? dev.sn : "IDIDIDIDID";
-            let user: string = dev.user ? dev.user : "admin";
-            let password: string = dev.password ? dev.password : "admin1";
-            if (this.device_ws === ws && this.device_sn === sn && this.device_user === user && this.device_password === password) {
+            if (this.device_host === dev.host && this.device_port === dev.port && this.device_user === dev.user && this.device_password === dev.password) {
                 return;
             }
             this.disconnectDevice();
             this.appendOutput('Connect device....');    
-            this.device_ws = ws;
-            this.device_sn = sn;
-            this.device_user = user;
-            this.device_password = password;
+            this.device_host = dev.host ? dev.host : "127.0.0.1";
+            this.device_port = dev.port ? dev.port : 8818;
+            this.device_sn = dev.sn;
+            this.device_user = dev.user;
+            this.device_password = dev.password;
 
-            this.ws_con = new WsConn(this, ws, user, password);
-        }
-    }
-    public on_device_sn(dev_sn: string, on_ready: () => void) {
-        if (dev_sn !== this.device_sn) {
-            ui.showIncorrectSN(dev_sn, this.device_sn).then((sn: string) => {
-                if (sn !== this.device_sn) {
-                    this.updateDeviceSN(sn);
-                    on_ready();
-                } else {
-                    this.disconnectDevice();
-                }
+            this.ws_client = new freeioe_client.WSClient(dev);
+            this.ws_client.on("device_sn_diff", (remote_sn : string) => this.on_device_sn_diff(remote_sn));
+            this.ws_client.on("console", (content: string) => this.appendOutput(content));
+            this.ws_client.on("log", (content: string) => this.appendLog(content));
+            this.ws_client.on("comm", (content: string) => this.appendCom(content));
+            this.ws_client.on("ready", () => {
+                vscode.window.showInformationMessage(`Device ${this.device_host} connnected!`);
             });
-        } else {
-            on_ready();
+            this.ws_client.on("error", (message: string) => {
+                vscode.window.showInformationMessage(`Device connnect failed! ${message}`);
+            });
+            this.ws_client.connect();
         }
     }
-    public on_login(result: boolean, message: string) {
-        vscode.workspace.getConfiguration('iot_editor').update('online', result);
-        if (result === true) {
-            this.appendOutput('Login successfully!!');
-            this.handleApplicationFetch();
-        } else {
-            this.appendOutput(`Login failed: ${message}`);
-            this.disconnectDevice();
+    public on_device_sn_diff(remote_sn: string) {
+        if (!this.device_sn) {
+            return;
         }
-    }
-    public on_disconnected(ws_con: WsConn) {
-        if (this.ws_con === ws_con) {
-            vscode.workspace.getConfiguration('iot_editor').update('online', false);
-        }
+        ui.showIncorrectSN(remote_sn, this.device_sn).then((sn: string) => {
+            if (sn !== this.device_sn) {
+                this.updateDeviceSN(sn);
+            } else {
+                setTimeout(async ()=>{
+                    this.disconnectDevice();
+                }, 1000);
+            }
+        });
     }
     public on_ws_message( code: string, data: any) {
         this.appendOutput(`WebSocket message: ${code} ${data}`);
     }
     private disconnectDevice() {
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
-        this.device_apps = [];
-        this.device_ws = "";
-        this.device_sn = "";
-        if (this.ws_con !== undefined) {
+        this.device_host = "";
+        this.device_port = 8818;
+        this.device_sn = undefined;
+        this.device_user = "";
+        this.device_password = "";
+        if (this.ws_client !== undefined) {
             this.appendOutput('Disconnect device....');
-            this.ws_con.close();
-            this.ws_con = undefined;
+            this.ws_client.disconnect();
+            this.ws_client = undefined;
         }
     }
     
@@ -296,36 +313,28 @@ export class Client {
     }
 
     public handleApplicationCreateCommand(): void {
-        ui.showApplicationCreate().then(( app: Application|undefined) => {
-            if (!app || !this.ws_con) {
+        ui.showApplicationCreate().then(( app: freeioe_client.Application|undefined) => {
+            if (!app || !this.ws_client) {
                 return;
             }
-            this.ws_con.app_new(app.name, app.inst, (code, data) => {
-                if (data.result === true) {
-                    app.version = 0;
-                    app.islocal = 1;
-                    this.device_apps.push(app);
-                    setTimeout(async ()=>{
-                        this.downloadApplication(app);
-                    }, 1000);
-                } else {
-                    vscode.window.showErrorMessage(data.message);
-                }
-                return true;
-            });
+            this.ws_client.create_app(app);
         });
     }
 
     public handleApplicationDownloadCommand(): void {
-        ui.showApplications(this.device_apps)
+        if (!this.ws_client) {
+            return;
+        }
+        let apps : freeioe_client.Application[] = this.ws_client.apps();
+        ui.showApplications(apps)
             .then((index: number) => {
                 if (index < 0) {
                     return;
                 }
-                if (index >= this.device_apps.length) {
+                if (index >= apps.length) {
                     this.handleApplicationCreateCommand();
                 } else {
-                    this.downloadApplication(this.device_apps[index]);
+                    this.downloadApplication(apps[index]);
                 }
             });
 
@@ -370,10 +379,11 @@ export class Client {
         console.log('Start Application', inst);
         let promises: Thenable<void>[] = [];
 
-        if (this.ws_con !== undefined) {
-            this.ws_con.app_start(inst, (code, data) => {
-                vscode.window.showInformationMessage(data.message);
-                return true;
+        if (this.ws_client !== undefined) {
+            this.ws_client.start_app(inst).then( (result: boolean) => {
+                vscode.window.showInformationMessage(`Application ${inst} started!`);
+            }, (reason) => {
+                vscode.window.showInformationMessage(`Application start failed! ${reason}`);
             });
         }
 
@@ -383,10 +393,11 @@ export class Client {
         console.log('Stop Application', inst);
         let promises: Thenable<void>[] = [];
 
-        if (this.ws_con !== undefined) {
-            this.ws_con.app_stop(inst, "stop from vscode", (code, data) => {
-                vscode.window.showInformationMessage(data.message);
-                return true;
+        if (this.ws_client !== undefined) {
+            this.ws_client.stop_app(inst, "stop from vscode").then( (result: boolean) => {
+                vscode.window.showInformationMessage(`Application ${inst} stoped!`);
+            }, (reason) => {
+                vscode.window.showInformationMessage(`Application stop failed! ${reason}`);
             });
         }
 
@@ -401,25 +412,7 @@ export class Client {
         this.configuration.saveToFile();
         this.device_sn = sn;
     }
-    private handleApplicationFetch(): void {
-        console.log('[Client] handleApplicationFetch');
-
-        if (this.ws_con !== undefined) {
-            this.ws_con.app_list((code, data) => {
-                interface AppList { [key: string]: Application; };
-    
-                let list: AppList = Object.assign({}, data);
-                for(let k in list) {
-                    if (!list[k].inst) {
-                        list[k].inst = k;
-                    }
-                    this.device_apps.push(list[k]);
-                }
-                return true;
-            });
-        }
-    }
-    private downloadApplication(app: Application) {
+    private downloadApplication(app: freeioe_client.Application) {
         let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
         let apps = conf.apps;
         if (!apps) {
@@ -467,8 +460,10 @@ export class Client {
             }
         };
 
-        if (this.ws_con){
-            this.ws_con.editor_get(options.qs, (code, data) => {
+        if (this.ws_client){
+            let ws_con = this.ws_client.get_ws_con();
+            ws_con.editor_get(options.qs).then((msg) => {
+                let data = msg.data;
                 if (data.result !== true) {
                     this.appendOutput(`Download application failed! ${data.message}`);
                     return true;
@@ -529,8 +524,10 @@ export class Client {
             }
         };
 
-        if (this.ws_con){
-            this.ws_con.editor_get(options.qs, (code, data) => {
+        if (this.ws_client){
+            let ws_con = this.ws_client.get_ws_con();
+            ws_con.editor_get(options.qs).then( (msg) => {
+                let data = msg.data;
                 if (data.result !== true) {
                     this.appendOutput(`Download file failed! ${data.message}`);
                     return true;
@@ -557,29 +554,18 @@ export class Client {
         let promises: Thenable<void>[] = [];
 
         let content: string = fs.readFileSync(this.RootPath + "\\" + local_dir + filepath, "UTF-8");
-        let options = {
-            form: {
-                app: inst,
-                operation: 'set_content_ex',
-                id: filepath,
-                text: content,
-            }
-        };
 
-        if (this.ws_con){
-            this.ws_con.editor_post(options.form, (code, data) => {
-                if (data.result !== true) {
-                    this.appendOutput(`File ${filepath} upload failed! ${data.message}`);
-                } else {
-                    this.appendOutput(`File ${filepath} uploaded`);
-                }
-                return true;
-            });
+        if (this.ws_client){
+            this.ws_client.upload_file(inst, filepath, content);
         }
 
         return Promise.all(promises).then(() => undefined);
     }
     private getApplicationFromFilePath(filepath: string): configs.Application | undefined {
+        if (! this.ws_client) {
+            return undefined;
+        }
+
         let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
         let apps = conf.apps;
         if (!apps) {
@@ -591,8 +577,9 @@ export class Client {
                 app = iter;
             }
         }
-        if (app) {
-            for (let iter of this.device_apps) {
+        let device_apps = this.ws_client.apps();
+        if (app && this.ws_client.apps()) {
+            for (let iter of device_apps) {
                 if (iter.inst === app.inst) {
                     return app;
                 }

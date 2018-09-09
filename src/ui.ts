@@ -5,7 +5,8 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { Client, Application } from './client';
+import { Client } from './client';
+import { Application } from './freeioe_client';
 
 let ui: UI;
 

@@ -23,10 +23,10 @@ export interface ApplicationFileNode {
     children: ApplicationFileNode[] | boolean;
 }
 
-export class Client extends events.EventEmitter {
+export class WSClient extends events.EventEmitter {
     private disposables: vscode.Disposable[] = [];
     private device_ws: string = "";
-    private device_sn: string = "";
+    private device_sn: string | undefined;
     private device_user: string = "";
     private device_password: string = "";
     private device_apps: Application[] = [];
@@ -39,11 +39,12 @@ export class Client extends events.EventEmitter {
         let host: string = options.host ? options.host : "127.0.0.1";
         let port: number = options.port ? options.port : 8818;
         this.device_ws = "ws://" + host + ":" + port;
-        this.device_sn = options.sn ? options.sn : "IDIDIDIDID";
+        this.device_sn = options.sn;
         this.device_user = options.user ? options.user : "admin";
         this.device_password = options.password ? options.password : "admin1";
 
         this.ws_con = new FreeIOEWS(this.device_ws, this.device_user, this.device_password);
+        this.ws_con.on("info", (sn: string, beta: boolean) => this.on_device_info(sn, beta));
         this.ws_con.on("login",  (result: boolean, message: string) => this.on_login(result, message));
         this.ws_con.on("close",  (code: number, reason: string) => this.on_disconnected(code, reason));
         this.ws_con.on("message", (msg : WSMessage) => this.on_ws_message(msg));
@@ -54,10 +55,20 @@ export class Client extends events.EventEmitter {
     }
 
     private appendOutput(content : string) {
-        this.emit('log', content);
+        this.emit('console', content);
     }
 
-    public connect() : Thenable<Client> {
+    public is_connected() : boolean {
+        return this.connected;
+    }
+    public apps() : Application[] {
+        return this.device_apps;
+    }
+    public get_ws_con() : FreeIOEWS {
+        return this.ws_con;
+    }
+
+    public connect() : Thenable<WSClient> {
         this.appendOutput('Connect device....');
         return new Promise((c, e) => {
             if (this.connected) {
@@ -72,6 +83,11 @@ export class Client extends events.EventEmitter {
                 });
             }
         });
+    }
+    private on_device_info(sn: string, beta: boolean) {
+        if (this.device_sn && this.device_sn !== sn) {
+            this.emit('device_sn_diff', sn);
+        }
     }
     private on_login(result: boolean, message: string) {
         vscode.workspace.getConfiguration('iot_editor').update('online', result);
@@ -125,7 +141,7 @@ export class Client extends events.EventEmitter {
     }
 
     public restart_app(inst: string): Thenable<boolean> {
-        this.emit('log', `Restart Application ${inst}`);
+        this.appendOutput(`Restart Application ${inst}`);
 		return new Promise((c, e) => {     
             return this.stop_app(inst, "Restart Application").then((result)=> {
                 if (result) {
@@ -139,7 +155,7 @@ export class Client extends events.EventEmitter {
         });
     }
     public start_app(inst: string): Thenable<boolean> {
-        this.emit('log', `Start Application ${inst}`);
+        this.appendOutput(`Start Application ${inst}`);
 		return new Promise((c, e) => {       
             return this.ws_con.app_start(inst).then( (msg) => {
                 let data = msg.data;
@@ -154,7 +170,7 @@ export class Client extends events.EventEmitter {
         });
     }
     public stop_app(inst: string, reason: string): Thenable<boolean> {
-        this.emit('log', `Stop Application ${inst}`);
+        this.appendOutput(`Stop Application ${inst}`);
 		return new Promise((c, e) => {       
             return this.ws_con.app_stop(inst, reason).then( (msg) => {
                 let data = msg.data;
@@ -170,21 +186,24 @@ export class Client extends events.EventEmitter {
     }
 
     public list_apps(): Thenable<Application[]> {
-        this.emit('log', `Get Application List`);
+        this.appendOutput(`Get Application List`);
 
         return new Promise((c, e) => {
             this.ws_con.app_list().then( (msg) => {
                 let data = msg.data;
-                interface AppList { [key: string]: Application; };
+                interface AppList { [key: string]: Application; }
     
                 let list: AppList = Object.assign({}, data);
+                let apps: Application[] = [];
                 for(let k in list) {
                     if (!list[k].inst) {
                         list[k].inst = k;
                     }
-                    this.device_apps.push(list[k]);
+                    apps.push(list[k]);
                 }
-                c(this.device_apps);
+                this.appendOutput(`Get Application List Done!`);
+                this.device_apps = apps;
+                c(apps);
             }, (reason) => {
                 e(reason);
             });
@@ -196,7 +215,7 @@ export class Client extends events.EventEmitter {
         if (sub_path.length === 0 || sub_path === '/') {
             sub_path = '#';
         }
-        this.emit('log', `Dir Application ${inst} ${sub_path}`);
+        this.appendOutput(`Dir Application ${inst} ${sub_path}`);
         return new Promise((c, e) => {
             let qs = {
                 app: inst,
@@ -224,12 +243,12 @@ export class Client extends events.EventEmitter {
                                     });
                             }
                             if (child.type === 'file') {
-                                this.emit('log', `Dir Application file: ${child.id}`);
+                                this.appendOutput(`Dir Application file: ${child.id}`);
                                 file_nodes.push(child);
                             }
                         }
                     } else {
-                        this.emit('log', `Dir Application file: ${node.id}`);
+                        this.appendOutput(`Dir Application file: ${node.id}`);
                         file_nodes.push(node);
                     }
                 }
@@ -240,7 +259,7 @@ export class Client extends events.EventEmitter {
         });
     }
     public download_file(inst: string, filepath: string): Thenable<string>  {
-        this.emit('log', `Download Application File ${inst} ${filepath}`);
+        this.appendOutput(`Download Application File ${inst} ${filepath}`);
         return new Promise((c, e) => {
             let qs = {
                 app: inst,
@@ -269,7 +288,7 @@ export class Client extends events.EventEmitter {
         });
     }
     public upload_file(inst: string, filepath: string, content: string) : Thenable<boolean> {
-        this.emit('log', `Upload Application File ${inst} ${filepath}`);
+        this.appendOutput(`Upload Application File ${inst} ${filepath}`);
         return new Promise((c, e) => {
             let form = {
                 app: inst,
@@ -280,15 +299,15 @@ export class Client extends events.EventEmitter {
             this.ws_con.editor_post(form).then((msg) => {
                 let data = msg.data;
                 if (data.result !== true) {
-                    this.emit('log', `File ${filepath} upload failed! ${data.message}`);
+                    this.appendOutput(`File ${filepath} upload failed! ${data.message}`);
                     c(false);
                 } else {
-                    this.emit('log', `File ${filepath} uploaded`);
+                    this.appendOutput(`File ${filepath} uploaded`);
                     c(true);
                 }
                 return true;
             }, (reason) => {
-                this.emit('log', reason);
+                this.appendOutput(reason);
                 c(false);
             });
         });

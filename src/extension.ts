@@ -3,7 +3,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { Client } from './client';
-import { IOTExplorer } from './iotExplorer.textDocumentContentProvider'
+import { IOTExplorer } from './iotExplorer.textDocumentContentProvider';
 
 let client: Client;
 let intervalTimer: NodeJS.Timer;
@@ -15,7 +15,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
-	iot_explorer = new IOTExplorer(context);
     
     console.log('IOT Editor extension loaded!');
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.aboutEditor', aboutEditor));
@@ -37,6 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
         let rootFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders[0];        
         client = new Client(rootFolder);
+        iot_explorer = new IOTExplorer(context, client);
     }
     intervalTimer = setInterval(onInterval, 2500);
 

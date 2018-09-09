@@ -101,7 +101,7 @@ export class WsConn {
     }
     private on_ws_close() {
         this.client.appendOutput("WebSocket connection is closed from " + this.address);
-        this.client.on_disconnected(this);
+        //this.client.on_disconnected(this);
         this.websocket = undefined;
 
         if (this.closed || this.reconnect_timer) {
@@ -127,9 +127,9 @@ export class WsConn {
             return;
         }
         if (msg.code === 'info') {
-            this.client.on_device_sn(msg.data.sn, () => {
-                this.send_login();
-            });
+            // this.client.on_device_sn(msg.data.sn, () => {
+            //     this.send_login();
+            // });
         }
         else if (msg.code === 'log') {
             let channel = this.client.LogChannel;
@@ -187,7 +187,7 @@ export class WsConn {
             passwd: this.password
         };
         return this.send_ws_message("login", data, (code: string, data: any) => {
-            this.client.on_login(data.result, data.message);
+           // this.client.on_login(data.result, data.message);
             return true;
         });
     }

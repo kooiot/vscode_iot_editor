@@ -21,7 +21,7 @@
     ],
     "icon": "images/icon.png",
     "activationEvents": [
-		"onView:iotExplorer",
+        "onView:iotExplorer",
         "onCommand:iot_editor.configurationEdit",
         "workspaceContains:**/iot_editor_properties.json"
     ],
@@ -168,21 +168,21 @@
                 }
             },
             {
-				"command": "IOTExplorer.refresh",
-				"title": "Refresh",
-				"icon": {
-					"light": "resources/light/refresh.svg",
-					"dark": "resources/dark/refresh.svg"
-				}
-			},
-			{
-				"command": "IOTExplorer.openFtpResource",
-				"title": "Open FTP Resource"
-			},
-			{
-				"command": "IOTExplorer.revealResource",
-				"title": "Reveal in FTP View"
-			}
+                "command": "IOTExplorer.refresh",
+                "title": "Refresh",
+                "icon": {
+                    "light": "./media/icon/refresh.svg",
+                    "dark": "./media/icon/refresh_inverse.svg"
+                }
+            },
+            {
+                "command": "IOTExplorer.openFtpResource",
+                "title": "Open FTP Resource"
+            },
+            {
+                "command": "IOTExplorer.revealResource",
+                "title": "Reveal in FTP View"
+            }
         ],
         "menus": {
             "commandPalette": [
@@ -223,13 +223,13 @@
                     "command": "iot_editor.connect"
                 }
             ],
-			"view/title": [
-				{
-					"command": "IOTExplorer.refresh",
-					"when": "view == IOTExplorer",
-					"group": "navigation"
-				}
-			],
+            "view/title": [
+                {
+                    "command": "IOTExplorer.refresh",
+                    "when": "view == IOTExplorer",
+                    "group": "navigation"
+                }
+            ],
             "editor/title": [
                 {
                     "when": "config.iot_editor.online == true",
@@ -315,15 +315,15 @@
     },
     "devDependencies": {
         "@types/mocha": "^2.2.42",
-        "@types/node": "^7.0.43",
-        "tslint": "^5.8.0",
-        "typescript": "^2.6.1",
-        "vscode": "^1.1.6"
+        "@types/node": "^7.0.70",
+        "tslint": "^5.11.0",
+        "typescript": "^2.9.2",
+        "vscode": "^1.1.21"
     },
     "dependencies": {
-        "@types/request": "^2.47.0",
-        "@types/ws": "^6.0.0",
-        "request": "^2.85.0",
+        "@types/request": "^2.47.1",
+        "@types/ws": "^6.0.1",
+        "request": "^2.88.0",
         "ws": "^6.0.0"
     }
 }

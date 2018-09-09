@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { Client, Application, ApplicationFileNode }  from './freeioe_client';
 import { basename, dirname } from 'path';
+import * as freeioe_client  from './freeioe_client';
+import * as client from './client';
 
 
 export interface IOTNode {
@@ -11,48 +12,45 @@ export interface IOTNode {
 
 export class IOTModel {
 
-	private nodes: Map<string, IOTNode> = new Map<string, IOTNode>();
+	private apps: Map<string, IOTNode> = new Map<string, IOTNode>();
 
-	constructor(readonly host: string, readonly port: number, private user: string, private password: string) {
+	constructor(readonly client: client.Client) {
 	}
 
-	public connect(): Thenable<Client> {
+	public get_client(): Thenable<freeioe_client.WSClient> {
 		return new Promise((c, e) => {
-			const client = new Client({
-				host: this.host,
-				port: this.port,
-				username: this.user,
-				password: this.password
-			});
-			client.on('ready', () => {
+			this.client.get_client().then( client => {
 				c(client);
-			});
-
-			client.on('error', (message : string) => {
-				e('Error while connecting: ' + message);
-			});
-
-			client.connect();
+			}, (reason) => {
+                e(reason);
+            });
 		});
 	}
 
 	public get roots(): Thenable<IOTNode[]> {
-		return this.connect().then(client => {
+		return this.get_client().then(client => {
+			let host = this.client.getWSHost();
 			return new Promise((c, e) => {
-				client.list_apps().then( (list: Application[]) => {
-					return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`iot://${this.host}///${entry.inst}`), app:entry.inst, isDirectory: true }))));
+				client.list_apps().then( (list: freeioe_client.Application[]) => {
+					return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`iot://${host}///${entry.inst}`), app:entry.inst, isDirectory: true }))));
+				}, (reason) => {
+					e(reason);
 				});
 			});
 		});
 	}
 
 	public getChildren(node: IOTNode): Thenable<IOTNode[]> {
-		return this.connect().then(client => {
+		return this.get_client().then(client => {
 			return new Promise((c, e) => {
-				let fsPath = node.resource.fsPath;
-				fsPath = fsPath.substr(node.app.length);
-				client.dir_app(node.app, fsPath.substr(2), false).then( (list: ApplicationFileNode[]) => {
-					return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${node.resource.fsPath}/${entry.id}`), app: node.app, isDirectory: entry.children !== false }))));
+				let uri = node.resource.scheme + "://" + node.resource.authority + "///" + node.app;
+				let path = node.resource.path.substr(3);
+				path = path.substr(node.app.length);
+				if (path.length === 0) {
+					path = "//";
+				}
+				client.dir_app(node.app, path, false).then( (list: freeioe_client.ApplicationFileNode[]) => {
+					return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${uri}/${entry.id}`), app: node.app, isDirectory: entry.children !== false }))));
 				});
 			});
 		});
@@ -73,12 +71,12 @@ export class IOTModel {
 	}
 
 	public getContent(resource: vscode.Uri): Thenable<string> {
-		return this.connect().then(client => {
+		return this.get_client().then(client => {
 			return new Promise((c, e) => {
-				let fsPath = resource.fsPath;
-				let app = fsPath.split('/')[0];
-				fsPath = fsPath.substr(app.length);
-				client.download_file(app, fsPath.substr(2)).then( (content) => {
+				let path = resource.path.substr(3);
+				let app = path.split('/')[0];
+				path = path.substr(app.length);
+				client.download_file(app, path).then( (content) => {
 					c(content);
 				});
 			});
@@ -86,7 +84,7 @@ export class IOTModel {
 	}
 }
 
-export class IOTTreeDataProvider implements vscode.TreeDataProvider<IOTNode>, vscode.TextDocumentContentProvider {
+export class IOTTreeDataProvider implements vscode.TreeDataProvider<IOTNode>, vscode.FileSystemProvider  {
 
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
 	readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
@@ -126,16 +124,16 @@ export class IOTTreeDataProvider implements vscode.TreeDataProvider<IOTNode>, vs
 }
 
 export class IOTExplorer {
+	private iotModel: IOTModel;
+	private treeDataProvider: IOTTreeDataProvider;
 
-	constructor(context: vscode.ExtensionContext) {
-		const iotModel = new IOTModel('192.168.0.245', 8881, 'admin', 'admin1');
-		const treeDataProvider = new IOTTreeDataProvider(iotModel);
-		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('iot', treeDataProvider));
-		context.subscriptions.push(vscode.window.registerTreeDataProvider('IOTExplorer', treeDataProvider));
+	constructor(context: vscode.ExtensionContext, device_client: client.Client) {
+		this.iotModel = new IOTModel(device_client);
+		this.treeDataProvider = new IOTTreeDataProvider(this.iotModel);
+		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('iot', this.treeDataProvider));
+		context.subscriptions.push(vscode.window.registerTreeDataProvider('IOTExplorer', this.treeDataProvider));
 
-		//this.ftpViewer = vscode.window.createTreeView('ftpExplorer', { treeDataProvider });
-
-		vscode.commands.registerCommand('IOTExplorer.refresh', () => treeDataProvider.refresh());
+		vscode.commands.registerCommand('IOTExplorer.refresh', () => this.treeDataProvider.refresh());
 		vscode.commands.registerCommand('IOTExplorer.openIOTResource', resource => this.openResource(resource));
 		//vscode.commands.registerCommand('IOTExplorer.revealResource', () => this.reveal());
 	}

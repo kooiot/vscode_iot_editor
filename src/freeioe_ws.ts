@@ -186,7 +186,11 @@ export class FreeIOEWS extends events.EventEmitter {
             }
             return;
         }
-        this.websocket.send(JSON.stringify(msg), {mask: true}, cb);
+        this.websocket.send(JSON.stringify(msg), {mask: true}, (err) => {
+            if (err && cb) {
+                cb(err);
+            }
+        });
     }
     private send_login() : Thenable<WSMessage> {
 		return new Promise((c, e) => {            

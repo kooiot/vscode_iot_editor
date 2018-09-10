@@ -1,9 +1,7 @@
 'use strict';
 
 import * as path from 'path';
-import * as fs from "fs";
 import * as vscode from 'vscode';
-import * as util from "./util";
 import * as configs from "./configurations";
 import * as freeioe_client  from './freeioe_client';
 import { UI, getUI } from './ui';
@@ -14,8 +12,8 @@ let ui: UI;
 let previousEditorSettings: { [key: string]: any } = {};
 
 interface FolderSettingsParams {
-    currentConfiguration: number;
-    configurations: any[];
+    currentDevice: number;
+    devices: any[];
 }
 
 interface ClientModel {
@@ -38,6 +36,7 @@ export class Client {
     private device_user: string | undefined;
     private device_password: string | undefined;
     private ws_client: freeioe_client.WSClient | undefined;
+    private beta_value = false;
 
     // The "model" that is displayed via the UI (status bar).
     private model: ClientModel = {
@@ -45,7 +44,6 @@ export class Client {
     };
 
     public get ActiveConfigChanged(): vscode.Event<string> { return this.model.activeConfigName.ValueChanged; }
-
     
     /**
      * don't use this.rootFolder directly since it can be undefined
@@ -62,17 +60,14 @@ export class Client {
     public get TrackedDocuments(): Set<vscode.TextDocument> {
         return this.trackedDocuments;
     }
-    public get OutputChannel() : vscode.OutputChannel | undefined {
-        return this.outputChannel;
-    }
-    public get LogChannel() : vscode.OutputChannel | undefined {
-        return this.logChannel;
-    }
-    public get CommChannel() : vscode.OutputChannel | undefined {
-        return this.commChannel;
-    }
-    public getWSHost() : string {
+    public get WSHost() : string {
         return `${this.device_host}:${this.device_port}`;
+    }
+    public get Beta() : boolean {
+        return this.beta_value;
+    }
+    public get ActiveDevice() : string {
+        return this.model.activeConfigName.Value;
     }
 
     private getName(workspaceFolder?: vscode.WorkspaceFolder): string {
@@ -105,18 +100,15 @@ export class Client {
         
         try {
             let conf = vscode.workspace.getConfiguration('iot_editor').get<number>('config');
-            if (!conf) { conf = -1;}
+            if (conf === undefined) { conf = -1;}
 
             this.setupOutputHandlers();
             
             this.configuration = new configs.EditorProperties(this.RootPath, conf);
-            this.configuration.ConfigurationsChanged((e) => this.onConfigurationsChanged(e));
-            this.configuration.SelectionChanged((e) => this.onSelectedConfigurationChanged(e));
+            this.configuration.DevicesChanged((e) => this.onDevicesChanged(e));
+            this.configuration.SelectionChanged((e) => this.onSelectedDeviceChanged(e));
             this.disposables.push(this.configuration);
             
-            let defaults = {applicationPath: ""};
-            this.configuration.ApplicationDefaults = defaults;
-
             this.registerFileWatcher();
         }
         catch(err) {
@@ -211,38 +203,54 @@ export class Client {
 			c(client);
 		});
     }
+    public get_configs() : Thenable<configs.EditorProperties> {
+        return new Promise((c, e) => {
+            c(this.configuration);
+        });
+    } 
 
     private connectDevice() {
-        let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
+        let conf = this.configuration.Devices[this.configuration.CurrentDevice];
 
-        let dev: configs.Device | undefined = conf.device;
-        if (dev) {
-            if (this.device_host === dev.host && this.device_port === dev.port && this.device_user === dev.user && this.device_password === dev.password) {
+        if (conf) {
+            if (this.device_host === conf.host && this.device_port === conf.port && this.device_user === conf.user && this.device_password === conf.password) {
                 return;
             }
             this.disconnectDevice();
-            this.appendOutput('Connect device....');    
-            this.device_host = dev.host ? dev.host : "127.0.0.1";
-            this.device_port = dev.port ? dev.port : 8818;
-            this.device_sn = dev.sn;
-            this.device_user = dev.user;
-            this.device_password = dev.password;
+            this.device_host = conf.host ? conf.host : "127.0.0.1";
+            this.device_port = conf.port ? conf.port : 8818;
+            this.device_sn = conf.sn;
+            this.device_user = conf.user;
+            this.device_password = conf.password;
+            this.appendOutput(`Start to connect device: ${this.device_host}:${this.device_port}`);
 
-            this.ws_client = new freeioe_client.WSClient(dev);
+            this.ws_client = new freeioe_client.WSClient(conf);
             this.ws_client.on("device_sn_diff", (remote_sn : string) => this.on_device_sn_diff(remote_sn));
             this.ws_client.on("console", (content: string) => this.appendOutput(content));
             this.ws_client.on("log", (content: string) => this.appendLog(content));
             this.ws_client.on("comm", (content: string) => this.appendCom(content));
+            this.ws_client.on("message", (code: string, data: any) => this.on_ws_message(code, data));
+            this.ws_client.on("device_info", (sn: string, beta: boolean) => this.on_device_info(sn, beta));
             this.ws_client.on("ready", () => {
-                vscode.window.showInformationMessage(`Device ${this.device_host} connnected!`);
+                vscode.window.showInformationMessage(`Device ${this.device_host}:${this.device_port} connnected!`);
+                this.refresh_views();
             });
             this.ws_client.on("error", (message: string) => {
                 vscode.window.showInformationMessage(`Device connnect failed! ${message}`);
+                this.refresh_views();
+            });
+            this.ws_client.on("disconnect", (code: number, reason: string) => {
+                vscode.window.showInformationMessage(`Device disconnected! code:${code} reason:${reason}`);
+                this.refresh_views();
             });
             this.ws_client.connect();
         }
     }
-    public on_device_sn_diff(remote_sn: string) {
+    private refresh_views() : void {
+        vscode.commands.executeCommand('DeviceViewer.refresh');
+        vscode.commands.executeCommand('IOTExplorer.refresh');
+    }
+    private on_device_sn_diff(remote_sn: string) {
         if (!this.device_sn) {
             return;
         }
@@ -256,37 +264,56 @@ export class Client {
             }
         });
     }
-    public on_ws_message( code: string, data: any) {
+    private on_device_info(remote_sn: string, beta: boolean) {
+        if (this.device_sn && this.device_sn !== remote_sn) {
+            return;
+        }
+        if (!this.device_sn) {
+            this.updateDeviceSN(remote_sn);
+        } else {
+            this.device_sn = remote_sn;
+        }
+        this.beta_value = beta;
+    }
+    
+    private on_ws_message( code: string, data: any) {
         this.appendOutput(`WebSocket message: ${code} ${data}`);
     }
     private disconnectDevice() {
-        vscode.workspace.getConfiguration('iot_editor').update('online', false);
         this.device_host = "";
         this.device_port = 8818;
         this.device_sn = undefined;
         this.device_user = "";
         this.device_password = "";
         if (this.ws_client !== undefined) {
-            this.appendOutput('Disconnect device....');
+            this.appendOutput(`Disconnect from device: ${this.device_host}:${this.device_port}`);
             this.ws_client.disconnect();
             this.ws_client = undefined;
         }
     }
     
-    private onConfigurationsChanged(configurations: configs.Configuration[]): void {
-        console.log('[Client] onConfigurationsChanged');
+    private onDevicesChanged(devices: configs.DeviceConfig[]): void {
+        console.log('[Client] onDevicesChanged');
+        if (this.configuration.CurrentDevice === -1 || this.configuration.CurrentDevice >= devices.length) {
+            return;
+        }
         let params: FolderSettingsParams = {
-            configurations: configurations,
-            currentConfiguration: this.configuration.CurrentConfiguration
+            devices: devices,
+            currentDevice: this.configuration.CurrentDevice
         };
-        this.model.activeConfigName.Value = configurations[params.currentConfiguration].name;
+        this.model.activeConfigName.Value = devices[params.currentDevice].name;
         
         this.connectDevice();
     }
 
-    private onSelectedConfigurationChanged(index: number): void {
-        console.log('[Client] onSelectedConfigurationChanged');
-        this.model.activeConfigName.Value = this.configuration.ConfigurationNames[index];
+    private onSelectedDeviceChanged(index: number): void {
+        console.log('[Client] onSelectedDeviceChanged');
+        if (index === -1) {
+            return;
+        }
+
+        this.model.activeConfigName.Value = this.configuration.DeviceNames[index];
+        vscode.workspace.getConfiguration('iot_editor').update('config', index);
         
         this.connectDevice();
     }
@@ -299,7 +326,7 @@ export class Client {
     }
 
     public handleConfigurationSelectCommand(): void {
-        ui.showConfigurations(this.configuration.ConfigurationNames)
+        ui.showConfigurations(this.configuration.DeviceNames)
             .then((index: number) => {
                 if (index < 0) {
                     return;
@@ -321,303 +348,53 @@ export class Client {
         });
     }
 
-    public handleApplicationDownloadCommand(): void {
-        if (!this.ws_client) {
-            return;
-        }
-        let apps : freeioe_client.Application[] = this.ws_client.apps();
-        ui.showApplications(apps)
-            .then((index: number) => {
-                if (index < 0) {
-                    return;
-                }
-                if (index >= apps.length) {
-                    this.handleApplicationCreateCommand();
-                } else {
-                    this.downloadApplication(apps[index]);
-                }
-            });
-
-    }
-    public handleApplicationUploadCommand(): void {
-        vscode.window.showWarningMessage("Application upload not implemented!");
-    }
-    public handleApplicationRestartCommand(doc: vscode.TextDocument): void {
-        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
-        let app = this.getApplicationFromFilePath(abpath);
-        if (app) {
-            this.stopApplication(app.inst).then(()=> {
-                    setTimeout(async ()=>{
-                        if (app) {
-                            this.startApplication(app.inst);
-                        }
-                    }, 1000);
-            });
-        } else {
-            vscode.window.showWarningMessage("Application instance is not found!");
-        }
-    }
-    public handleApplicationStartCommand(doc: vscode.TextDocument): void {
-        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
-        let app = this.getApplicationFromFilePath(abpath);
-        if (app) {
-            this.startApplication(app.inst);
-        } else {
-            vscode.window.showWarningMessage("Application instance is not found!");
-        }
-    }
-    public handleApplicationStopCommand(doc: vscode.TextDocument): void {
-        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
-        let app = this.getApplicationFromFilePath(abpath);
-        if (app) {
-            this.stopApplication(app.inst);
-        } else {
-            vscode.window.showWarningMessage("Application instance is not found!");
-        }
-    }
-    private startApplication(inst: string): Thenable<void> {
+    public startApplication(inst: string): Thenable<void> {
         console.log('Start Application', inst);
-        let promises: Thenable<void>[] = [];
-
-        if (this.ws_client !== undefined) {
-            this.ws_client.start_app(inst).then( (result: boolean) => {
+        return this.get_client().then( (client) => {
+            client.start_app(inst).then( (result: boolean) => {
                 vscode.window.showInformationMessage(`Application ${inst} started!`);
+                this.refresh_views();
             }, (reason) => {
                 vscode.window.showInformationMessage(`Application start failed! ${reason}`);
             });
-        }
-
-        return Promise.all(promises).then(() => undefined);
+        });
     }
-    private stopApplication(inst: string): Thenable<void> {
+    public stopApplication(inst: string, reason: string): Thenable<void> {
         console.log('Stop Application', inst);
-        let promises: Thenable<void>[] = [];
-
-        if (this.ws_client !== undefined) {
-            this.ws_client.stop_app(inst, "stop from vscode").then( (result: boolean) => {
-                vscode.window.showInformationMessage(`Application ${inst} stoped!`);
+        return this.get_client().then( (client) => {
+            client.stop_app(inst, reason).then( (result: boolean) => {
+                vscode.window.showInformationMessage(`Application ${inst} started!`);
+                this.refresh_views();
             }, (reason) => {
-                vscode.window.showInformationMessage(`Application stop failed! ${reason}`);
+                vscode.window.showInformationMessage(`Application start failed! ${reason}`);
             });
-        }
+        });
+    }
+    public restartApplication(inst: string, reason: string): Thenable<void> {
+        console.log('Restart Application', inst);
+        return this.get_client().then( (client) => {
+            client.restart_app(inst, reason).then( (result: boolean) => {
 
-        return Promise.all(promises).then(() => undefined);
+                vscode.window.showInformationMessage(`Application ${inst} started!`);
+                this.refresh_views();
+            }, (reason) => {
+                vscode.window.showInformationMessage(`Application start failed! ${reason}`);
+            });
+        });
+    }
+    public configApplication(inst: string): Thenable<void> {
+        console.log('Config Application', inst);
+        return this.get_client().then( (client) => {
+            // TODO:
+        });
     }
     private updateDeviceSN(sn:string) {
-        let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
-        let device = conf.device;
-        if (device) {
-            device.sn = sn;
+        let conf = this.configuration.Devices[this.configuration.CurrentDevice];
+        if (conf) {
+            conf.sn = sn;
         }
         this.configuration.saveToFile();
         this.device_sn = sn;
-    }
-    private downloadApplication(app: freeioe_client.Application) {
-        let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
-        let apps = conf.apps;
-        if (!apps) {
-            apps = [];
-        }
-        let local_dir:string|null = null;
-        for (let iter of apps) {
-            if (iter.inst === app.inst && iter.version === app.version) {
-                //vscode.window.showInformationMessage("Already Downloaded");
-                local_dir = iter.local_dir;
-                iter.version = app.version;
-            }
-        }
-        if (!local_dir) {
-            local_dir = this.configuration.ConfigurationNames[this.configuration.CurrentConfiguration] + "." + app.inst;
-            apps.push({inst: app.inst, version: app.version, local_dir: local_dir});
-            conf.apps = apps;
-        } else {
-            // fs.unlinkSync(this.RootPath + "\\" + local_dir);
-            // vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
-        }
-
-        fs.mkdir(this.RootPath + "\\" + local_dir);
-        //vscode.commands.executeCommand('explorer.newFolder', local_dir);
-
-        this.realDownloadApplication(local_dir, app.inst, "#")
-            .then(() => {
-                vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
-                this.configuration.saveToFile();
-                let main_file: string = this.RootPath + "\\" + local_dir + "\\app.lua";
-                setTimeout(async ()=>{
-                    vscode.workspace.openTextDocument(main_file).then(vscode.window.showTextDocument);
-                }, 3000);
-            });
-    }
-    private realDownloadApplication(local_dir: string, inst: string, id: string): Thenable<void>  {
-        console.log('realDownloadApplication', id);
-        let promises: Thenable<void>[] = [];
-
-        let options = {
-            qs: {
-                app: inst,
-                operation: 'get_node',
-                id: id
-            }
-        };
-
-        if (this.ws_client){
-            let ws_con = this.ws_client.get_ws_con();
-            ws_con.editor_get(options.qs).then((msg) => {
-                let data = msg.data;
-                if (data.result !== true) {
-                    this.appendOutput(`Download application failed! ${data.message}`);
-                    return true;
-                }
-                interface FileNode {
-                    type: string;
-                    id: string;
-                    text: string;
-                    children: FileNode[] | boolean;
-                }
-                let nodes: FileNode[] = Object.assign([], data.content);
-                let file_nodes: FileNode[] = [];
-                for (let node of nodes) {
-                    if (typeof(node.children) !== 'boolean') {
-                        for (let child of node.children) {
-                            console.log(child);
-                            if (child.type === 'folder') {
-                                    this.realDownloadApplication(local_dir, inst, child.id)
-                                        .then(() => {
-                                            console.log('download ' + child.id + ' finished');
-                                            fs.mkdir(this.RootPath + "\\" + local_dir + child.id);
-                                        });
-                            }
-                            if (child.type === 'file') {
-                                console.log('file:', child.id);
-                                file_nodes.push(child);
-                            }
-                        }
-                    } else {
-                        console.log('file:', node.id);
-                        file_nodes.push(node);
-                    }
-                }
-                
-                promises.push(util.make_promise().then(() => {
-                    setTimeout(async ()=>{
-                        for (let node of file_nodes) {
-                            this.downloadFile(local_dir, inst, node.id);
-                            await util.sleep(200);
-                        }
-                    }, 200);
-                }));
-                return true;
-            });
-        }
-
-        return Promise.all(promises).then(() => undefined);
-    }
-    private downloadFile(local_dir: string, inst: string, filepath: string): Thenable<void>  {
-        console.log('downloadFile', inst, filepath);
-        let promises: Thenable<void>[] = [];
-
-        let options = {
-            qs: {
-                app: inst,
-                operation: 'get_content',
-                id: filepath
-            }
-        };
-
-        if (this.ws_client){
-            let ws_con = this.ws_client.get_ws_con();
-            ws_con.editor_get(options.qs).then( (msg) => {
-                let data = msg.data;
-                if (data.result !== true) {
-                    this.appendOutput(`Download file failed! ${data.message}`);
-                    return true;
-                }
-                interface FileContent {
-                    content: string;
-                }
-
-                let fc: FileContent = Object.assign({}, data.content);
-                if (fc.content) {
-                    console.log("write file", this.RootPath + "\\" + local_dir + filepath);
-                    fs.writeFileSync(this.RootPath + "\\" + local_dir + filepath, fc.content);
-                } else {
-                    console.log("No file content found!");
-                }
-                return true;
-            });
-        }
-
-        return Promise.all(promises).then(() => undefined);
-    }
-    private uploadFile(local_dir: string, inst: string, filepath: string) : Thenable<void> {
-        console.log('uploadFile', inst, filepath);
-        let promises: Thenable<void>[] = [];
-
-        let content: string = fs.readFileSync(this.RootPath + "\\" + local_dir + filepath, "UTF-8");
-
-        if (this.ws_client){
-            this.ws_client.upload_file(inst, filepath, content);
-        }
-
-        return Promise.all(promises).then(() => undefined);
-    }
-    private getApplicationFromFilePath(filepath: string): configs.Application | undefined {
-        if (! this.ws_client) {
-            return undefined;
-        }
-
-        let conf = this.configuration.Configurations[this.configuration.CurrentConfiguration];
-        let apps = conf.apps;
-        if (!apps) {
-            apps = [];
-        }
-        let app: configs.Application | undefined = undefined;
-        for (let iter of apps) {
-            if (filepath.substr(0, iter.local_dir.length) === iter.local_dir) {
-                app = iter;
-            }
-        }
-        let device_apps = this.ws_client.apps();
-        if (app && this.ws_client.apps()) {
-            for (let iter of device_apps) {
-                if (iter.inst === app.inst) {
-                    return app;
-                }
-            }
-        }
-    }
-    public handleFileDownloadCommand(doc: vscode.TextDocument): void {
-        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
-        if (path.dirname(abpath) === '.vscode') {
-            return;
-        }
-        let app = this.getApplicationFromFilePath(abpath);
-        if (app) {
-            // vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-            let fpath = "/" + path.relative(app.local_dir, abpath);
-            console.log(fpath.replace("\\", "/"));
-            this.downloadFile(app.local_dir, app.inst, fpath.replace("\\", "/"));
-        } else {
-            vscode.window.showWarningMessage("Application instance is not found!");
-        }
-    }
-    public handleFileUploadCommand(doc: vscode.TextDocument): void {
-        let abpath = path.relative(this.RootPath, doc.uri.fsPath);
-        if (path.dirname(abpath) === '.vscode') {
-            return;
-        }
-        let app = this.getApplicationFromFilePath(abpath);
-        if (app) {
-            let fpath = "/" + path.relative(app.local_dir, abpath);
-            console.log(fpath.replace("\\", "/"));
-            doc.save().then((value: boolean) => {
-                if (app) {
-                    this.uploadFile(app.local_dir, app.inst, fpath.replace("\\", "/"));
-                }
-            });
-        } else {
-            vscode.window.showWarningMessage("Application instance is not found!");
-        }
     }
 
     public onInterval(): void {

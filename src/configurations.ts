@@ -7,27 +7,25 @@
 import * as path from 'path';
 import * as fs from "fs";
 import * as vscode from 'vscode';
-const configVersion: number = 1;
+const configVersion: number = 2;
 
 let defaultSettings: string = `{
-    "configurations": [
+    "devices": [
         {
             "name": "Device",
-            "device": {
-                "host": "192.168.0.245",
-                "port": 8818,
-                "sn": "",
-                "user": "admin",
-                "password": "admin1"
-            },
-            "apps": []
+            "host": "192.168.0.245",
+            "port": 8818,
+            "sn": "",
+            "user": "admin",
+            "password": "admin1"
         }
     ],
     "version": ${configVersion}
 }
 `;
 
-export interface Device {
+export interface DeviceConfig {
+    name: string;
     host?: string;
     port?: number;
     sn?: string;
@@ -35,24 +33,8 @@ export interface Device {
     password?: string;
 }
 
-export interface Application {
-    inst: string;
-    version: number;
-    local_dir: string;
-}
-
-export interface Configuration {
-    name: string;
-    device: Device;
-    apps?: Application[];
-}
-
-export interface ApplicationDefaults {
-    applicationPath: string;
-}
-
 interface ConfigurationJson {
-    configurations: Configuration[];
+    devices: DeviceConfig[];
     version: number;
 }
 
@@ -60,11 +42,11 @@ export class EditorProperties {
     private propertiesFile: vscode.Uri|undefined = undefined;
     private readonly configFolder: string;
     private configurationJson: ConfigurationJson|undefined = undefined;
-    private currentConfigurationIndex: number = -1;
+    private currentDeviceIndex: number = -1;
     private configFileWatcher: vscode.FileSystemWatcher|undefined = undefined;
     private configFileWatcherFallbackTime: Date = new Date(); // Used when file watching fails.
     private disposables: vscode.Disposable[] = [];
-    private configurationsChanged = new vscode.EventEmitter<Configuration[]>();
+    private devicesChanged = new vscode.EventEmitter<DeviceConfig[]>();
     private selectionChanged = new vscode.EventEmitter<number>();
 
     // Any time the `defaultSettings` are parsed and assigned to `this.configurationJson`,
@@ -74,12 +56,15 @@ export class EditorProperties {
     constructor(rootPath: string, config: number) {
         console.assert(rootPath !== undefined);
         this.configFolder = path.join(rootPath, ".vscode");
-        this.currentConfigurationIndex = config;
-        //this.resetToDefaultSettings(this.currentConfigurationIndex === -1);
+        this.currentDeviceIndex = config;
 
-        let configFilePath: string = path.join(this.configFolder, "iot_editor_properties.json");
+        let configFilePath: string = path.join(this.configFolder, "freeioe_devices.json");
         if (fs.existsSync(configFilePath)) {
             this.propertiesFile = vscode.Uri.file(configFilePath);
+            setTimeout(async ()=>{
+                this.parsePropertiesFile();
+                this.onSelectionChanged();
+            }, 100);
         }
 
         this.configFileWatcher = vscode.workspace.createFileSystemWatcher(configFilePath);
@@ -99,34 +84,30 @@ export class EditorProperties {
             this.handleConfigurationChange();
         });
 
-        this.disposables.push(vscode.Disposable.from(this.configurationsChanged, this.selectionChanged));
+        this.disposables.push(vscode.Disposable.from(this.devicesChanged, this.selectionChanged));
     }
 
-    public get ConfigurationsChanged(): vscode.Event<Configuration[]> { return this.configurationsChanged.event; }
+    public get DevicesChanged(): vscode.Event<DeviceConfig[]> { return this.devicesChanged.event; }
     public get SelectionChanged(): vscode.Event<number> { return this.selectionChanged.event; }
-    public get Configurations(): Configuration[] { return (this.configurationJson) ? this.configurationJson.configurations : []; }
-    public get CurrentConfiguration(): number { return this.currentConfigurationIndex; }
+    public get Devices(): DeviceConfig[] { return (this.configurationJson) ? this.configurationJson.devices : []; }
+    public get CurrentDevice(): number { return this.currentDeviceIndex; }
 
-    public get ConfigurationNames(): string[] {
+    public get DeviceNames(): string[] {
         let result: string[] = [];
         if (this.configurationJson) {
-            this.configurationJson.configurations.forEach((config: Configuration) => result.push(config.name));
+            this.configurationJson.devices.forEach((config: DeviceConfig) => result.push(config.name));
         }
         return result;
     }
-    
-    public set ApplicationDefaults(applicationDefaults: ApplicationDefaults) {
-        this.handleConfigurationChange();
-    }
 
-    private onConfigurationsChanged(): void {
-        console.log('[EditorProperties] onConfigurationsChanged');
-        this.configurationsChanged.fire(this.Configurations);
+    private onDevicesChanged(): void {
+        console.log('[EditorProperties] onDevicesChanged');
+        this.devicesChanged.fire(this.Devices);
     }
 
     private onSelectionChanged(): void {
         console.log('[EditorProperties] onSelectionChanged');
-        this.selectionChanged.fire(this.CurrentConfiguration);
+        this.selectionChanged.fire(this.CurrentDevice);
     }
 
     private resetToDefaultSettings(resetIndex: boolean): void {
@@ -134,9 +115,9 @@ export class EditorProperties {
         if (!this.configurationJson) {
             return;
         }
-        if (resetIndex || this.CurrentConfiguration < 0 ||
-            this.CurrentConfiguration >= this.configurationJson.configurations.length) {
-            this.currentConfigurationIndex = 0;
+        if (resetIndex || this.CurrentDevice < 0 ||
+            this.CurrentDevice >= this.configurationJson.devices.length) {
+            this.currentDeviceIndex = 0;
         }
         this.configurationIncomplete = true;
     }
@@ -145,11 +126,11 @@ export class EditorProperties {
         if (!this.configurationJson) {
             return;
         }
-        if (index === this.configurationJson.configurations.length) {
+        if (index === this.configurationJson.devices.length) {
             this.handleConfigurationEditCommand(vscode.window.showTextDocument);
         }
         else {
-            this.currentConfigurationIndex = index;
+            this.currentDeviceIndex = index;
             this.onSelectionChanged();
         }
     }
@@ -166,7 +147,7 @@ export class EditorProperties {
         // }
 
         if (!this.configurationIncomplete) {
-            this.onConfigurationsChanged();
+            this.onDevicesChanged();
         } else {
             console.log('!this.configurationIncomplete');
         }
@@ -187,7 +168,7 @@ export class EditorProperties {
             fs.mkdir(this.configFolder, (e: NodeJS.ErrnoException | undefined) => {
                 if (!e || e.code === 'EEXIST') {
                     let dirPathEscaped: string = this.configFolder.replace("#", "%23");
-                    let fullPathToFile: string = path.join(dirPathEscaped, "iot_editor_properties.json");
+                    let fullPathToFile: string = path.join(dirPathEscaped, "freeioe_devices.json");
                     let filePath: vscode.Uri = vscode.Uri.parse("untitled:" + fullPathToFile);
                     vscode.workspace.openTextDocument(filePath).then((document: vscode.TextDocument) => {
                         let edit: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
@@ -202,7 +183,7 @@ export class EditorProperties {
                             // Before this fix the file existed but was unsaved, so we went through the same
                             // code path and reapplied the edit.
                             document.save().then(() => {
-                                this.propertiesFile = vscode.Uri.file(path.join(this.configFolder, "iot_editor_properties.json"));
+                                this.propertiesFile = vscode.Uri.file(path.join(this.configFolder, "freeioe_devices.json"));
                                 vscode.workspace.openTextDocument(this.propertiesFile).then((document: vscode.TextDocument) => {
                                     onSuccess(document);
                                 });
@@ -221,10 +202,10 @@ export class EditorProperties {
             // parsePropertiesFile can fail, but it won't overwrite an existing configurationJson in the event of failure.
             // this.configurationJson should only be undefined here if we have never successfully parsed the propertiesFile.
             if (this.configurationJson) {
-                if (this.CurrentConfiguration < 0 ||
-                    this.CurrentConfiguration >= this.configurationJson.configurations.length) {
+                if (this.CurrentDevice < 0 ||
+                    this.CurrentDevice >= this.configurationJson.devices.length) {
                     // If the index is out of bounds (during initialization or due to removal of configs), fix it.
-                    this.currentConfigurationIndex = 0;
+                    this.currentDeviceIndex = 0;
                 }
             }
         }
@@ -248,24 +229,24 @@ export class EditorProperties {
 
             // Try to use the same configuration as before the change.
             let newJson: ConfigurationJson = JSON.parse(readResults);
-            if (!newJson || !newJson.configurations || newJson.configurations.length === 0) {
+            if (!newJson || !newJson.devices || newJson.devices.length === 0) {
                 throw { message: "Invalid configuration file. There must be at least one configuration present in the array." };
             }
-            if (!this.configurationIncomplete && this.configurationJson && this.configurationJson.configurations &&
-                this.CurrentConfiguration < this.configurationJson.configurations.length) {
-                for (let i: number = 0; i < newJson.configurations.length; i++) {
-                    if (newJson.configurations[i].name === this.configurationJson.configurations[this.CurrentConfiguration].name) {
-                        this.currentConfigurationIndex = i;
+            if (!this.configurationIncomplete && this.configurationJson && this.configurationJson.devices &&
+                this.CurrentDevice < this.configurationJson.devices.length && this.CurrentDevice !== -1) {
+                for (let i: number = 0; i < newJson.devices.length; i++) {
+                    if (newJson.devices[i].name === this.configurationJson.devices[this.CurrentDevice].name) {
+                        this.currentDeviceIndex = i;
                         break;
                     }
                 }
             }
             this.configurationJson = newJson;
-            if (this.CurrentConfiguration >= newJson.configurations.length) {
-                this.currentConfigurationIndex = 0;
+            if (this.CurrentDevice >= newJson.devices.length) {
+                this.currentDeviceIndex = 0;
             }
 
-            // Warning: There is a chance that this is incorrect in the event that the iot_editor_properties.json file was created before
+            // Warning: There is a chance that this is incorrect in the event that the freeioe_devices.json file was created before
             // the system includes were available.
             this.configurationIncomplete = false;
 
@@ -278,7 +259,7 @@ export class EditorProperties {
             }
 
             // Update the compilerPath, cStandard, and cppStandard with the default if they're missing.
-            // let config: Configuration = this.configurationJson.configurations[this.CurrentConfiguration];
+            // let config: Configuration = this.configurationJson.configurations[this.CurrentDevice];
             // Don't set the default if compileCommands exist, until it is fixed to have the correct value.
             // if (config.compilerPath === undefined && this.defaultCompilerPath && !config.compileCommands) {
             //     config.compilerPath = this.defaultCompilerPath;
@@ -314,7 +295,7 @@ export class EditorProperties {
             return;
         }
         // Check for change properties in case of file watcher failure.
-        let propertiesFile: string = path.join(this.configFolder, "iot_editor_properties.json");
+        let propertiesFile: string = path.join(this.configFolder, "freeioe_devices.json");
         fs.stat(propertiesFile, (err, stats) => {
             if (err) {
                 console.log(err);

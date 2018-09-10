@@ -1,3 +1,5 @@
+'use strict';
+
 import * as vscode from 'vscode';
 import { basename, dirname } from 'path';
 import * as freeioe_client  from './freeioe_client';
@@ -16,7 +18,7 @@ interface IOTUriNode {
 }
 export class IOTModel {
 
-	private apps: Map<string, IOTNode> = new Map<string, IOTNode>();
+	//private apps: Map<string, IOTNode> = new Map<string, IOTNode>();
 
 	constructor(readonly client: client.Client, readonly schema: string) {
 	}
@@ -32,21 +34,23 @@ export class IOTModel {
 	}
 
 	public get roots(): Thenable<IOTNode[]> {
-		return this.get_client().then(client => {
-			let host = this.client.getWSHost();
-			return new Promise((c, e) => {
+		return new Promise((c, e) => {
+			return this.get_client().then(client => {
+				let host = this.client.WSHost;
 				client.list_apps().then( (list: freeioe_client.Application[]) => {
 					return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${this.schema}://${host}///${entry.inst}`), app:entry.inst, isDirectory: true }))));
 				}, (reason) => {
 					e(reason);
 				});
+			}, (reason) => {
+				e(reason);
 			});
 		});
 	}
 
 	public getChildren(node: IOTNode): Thenable<IOTNode[]> {
-		return this.get_client().then(client => {
-			return new Promise((c, e) => {
+		return new Promise((c, e) => {
+			return this.get_client().then(client => {
 				let uri = node.resource.scheme + "://" + node.resource.authority + "///" + node.app;
 				let path = node.resource.path.substr(3);
 				path = path.substr(node.app.length);
@@ -54,10 +58,12 @@ export class IOTModel {
 					path = "//";
 				}
 				client.dir_app(node.app, path, false).then( (list: freeioe_client.ApplicationFileNode[]) => {
-					return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${uri}/${entry.id}`), app: node.app, isDirectory: entry.children !== false }))));
+					c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${uri}/${entry.id}`), app: node.app, isDirectory: entry.children !== false }))));
 				}, (reason) => {
 					e(reason);
 				});
+			}, (reason) => {
+				e(reason);
 			});
 		});
 	}
@@ -81,6 +87,17 @@ export class IOTModel {
 		return {app: app, path: path.substr(app.length)};
 	}
 
+	public valid_beta(): Thenable<void> {
+		return new Promise((c, e) => {
+			if (!this.client.Beta) {
+				vscode.window.showWarningMessage(`Device is not in beta mode! So you cannot edit application content!`);
+				e(`Beta is not enabled!`);
+			} else {
+				c();
+			}
+		});
+	}
+
 	public getContent(resource: vscode.Uri): Thenable<string> {
 		return this.get_client().then(client => {
 			let node = this.parse_uri(resource);
@@ -101,13 +118,17 @@ export class IOTModel {
 				let oldNode = this.parse_uri(oldUri);
 				let newNode = this.parse_uri(newUri);
 				if (oldNode.app !== newNode.app) {
-					return e('Cannot move node between applications');
+					e('Cannot move node between applications');
+					return;
 				}
 				if (oldNode.path === newNode.path) {
 					c(true);
-				} else {
-					return client.rename(newNode.app, oldNode.path, newNode.path);
 				}
+				if (true) {
+					e('qqqq');
+					c(true);
+				}
+				return client.rename(newNode.app, oldNode.path, newNode.path);
 			});
 		});
 	}
@@ -142,6 +163,26 @@ export class IOTModel {
 		});
 		return this.getChildren(node);
 	}
+
+	public applicationStart(item: IOTNode | vscode.Uri) : Thenable<void> {
+		let node = this.parse_uri((item instanceof vscode.Uri) ? item : item.resource);
+		return this.client.startApplication(node.app);
+	}
+	
+	public applicationStop(item: IOTNode | vscode.Uri) : Thenable<void> {
+		let node = this.parse_uri((item instanceof vscode.Uri) ? item : item.resource);
+		return this.client.stopApplication(node.app, 'Stop from IOTExplorer');
+	}
+	
+	public applicationRestart(item: IOTNode | vscode.Uri) : Thenable<void> {
+		let node = this.parse_uri((item instanceof vscode.Uri) ? item : item.resource);
+		return this.client.restartApplication(node.app, 'Restart from IOTExplorer');
+	}
+	
+	public applicationConfig(item: IOTNode | vscode.Uri) : Thenable<void> {
+		let node = this.parse_uri((item instanceof vscode.Uri) ? item : item.resource);
+		return this.client.configApplication(node.app);
+	}
 }
 
 export class IOTTreeDataProvider implements vscode.TreeDataProvider<IOTNode>, vscode.TextDocumentContentProvider  {
@@ -160,6 +201,7 @@ export class IOTTreeDataProvider implements vscode.TreeDataProvider<IOTNode>, vs
 		return {
 			resourceUri: element.resource,
 			collapsibleState: element.isDirectory ? vscode.TreeItemCollapsibleState.Collapsed : void 0,
+			contextValue: 'IOTViewer',
 			command: element.isDirectory ? void 0 : {
 				command: 'IOTViewer.openFile',
 				arguments: [element.resource],
@@ -237,46 +279,54 @@ export class IOTFileSystemProvider implements vscode.TreeDataProvider<IOTNode>, 
     }
 
     writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }): void {
-		this.model.setContent(uri, content.toString()).then( (result: boolean) => {
-			if (result) {
-				this._fireSoon({ type: vscode.FileChangeType.Changed, uri });
-			} else {
+		this.model.valid_beta().then( () => {
+			this.model.setContent(uri, content.toString()).then((result: boolean) => {
+				if (result) {
+					this._fireSoon({ type: vscode.FileChangeType.Changed, uri });
+				} else {
+					// TODO:
+					//this._fireSoon({ type: vscode.FileSystemError, uri});
+				}
+			}, (reason) => {
 				// TODO:
-				//this._fireSoon({ type: vscode.FileSystemError, uri});
-			}
-		}, (reason) => {
-			// TODO:
+			});
 		});
     }
 
     // --- manage files/folders
 
     rename(oldUri: vscode.Uri, newUri: vscode.Uri, options: { overwrite: boolean }): void {
-		this.model.renameNode(oldUri, newUri).then( (result:boolean) => {
-			if (result) {
-				this._fireSoon(
-					{ type: vscode.FileChangeType.Deleted, uri: oldUri },
-					{ type: vscode.FileChangeType.Created, uri: newUri }
-				);
-			}
+		this.model.valid_beta().then( () => {
+			this.model.renameNode(oldUri, newUri).then((result: boolean) => {
+				if (result) {
+					this._fireSoon(
+						{ type: vscode.FileChangeType.Deleted, uri: oldUri },
+						{ type: vscode.FileChangeType.Created, uri: newUri }
+					);
+				}
+			});
 		});
     }
 
     delete(uri: vscode.Uri): void {
-		let folder = uri.with({ path: dirname(uri.path) });
-		this.model.deleteNode(uri).then( (result:boolean) => {
-			if (result) {
-				this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { uri, type: vscode.FileChangeType.Deleted });
-			}
+		this.model.valid_beta().then(() => {
+			let folder = uri.with({ path: dirname(uri.path) });
+			this.model.deleteNode(uri).then((result: boolean) => {
+				if (result) {
+					this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { uri, type: vscode.FileChangeType.Deleted });
+				}
+			});
 		});
     }
 
     createDirectory(uri: vscode.Uri): void {
-		let folder = uri.with({ path: dirname(uri.path) });
-		this.model.createNode(uri, 'directory').then( (result:boolean) => {
-			if (result) {
-				this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { type: vscode.FileChangeType.Created, uri });
-			}
+		this.model.valid_beta().then(() => {
+			let folder = uri.with({ path: dirname(uri.path) });
+			this.model.createNode(uri, 'directory').then((result: boolean) => {
+				if (result) {
+					this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { type: vscode.FileChangeType.Created, uri });
+				}
+			});
 		});
     }
 
@@ -332,6 +382,7 @@ export class IOTFileSystemProvider implements vscode.TreeDataProvider<IOTNode>, 
 			treeItem.command = { command: 'IOTExplorer.openFile', title: "Open File", arguments: [element.resource], };
 			treeItem.contextValue = 'file';
 		}
+		treeItem.contextValue = 'IOTExplorer';
 		return treeItem;
 	}
 
@@ -362,10 +413,15 @@ export class IOTExplorer {
 		vscode.commands.registerCommand('IOTExplorer.refresh', () => this.fileSystemProvider.refresh());
 		vscode.commands.registerCommand('IOTExplorer.openFile', resource => this.openResource(resource));
 		vscode.commands.registerCommand('IOTExplorer.revealResource', () => this.reveal());
+		
+		vscode.commands.registerCommand('IOTExplorer.applicationStart', (node) => this.iotModel.applicationStart(node));
+		vscode.commands.registerCommand('IOTExplorer.applicationStop', (node) => this.iotModel.applicationStop(node));
+		vscode.commands.registerCommand('IOTExplorer.applicationRestart', (node) => this.iotModel.applicationRestart(node));
+		vscode.commands.registerCommand('IOTExplorer.applicationConfig', (node) => this.iotModel.applicationConfig(node));
 	}
 
 	private openResource(resource: vscode.Uri): void {
-		vscode.window.showTextDocument(resource);
+		vscode.window.showTextDocument(resource, {preserveFocus: true});
 	}
 
 	private reveal(): void {
@@ -378,7 +434,7 @@ export class IOTExplorer {
 	private getNode(): IOTNode | undefined {
 		if (vscode.window.activeTextEditor) {
 			let uri = vscode.window.activeTextEditor.document.uri;
-			if (uri.scheme === 'iot') {
+			if (uri.scheme === 'ioe') {
 				let path = uri.path.substr(3);
 				let app = path.split('/')[0];
 				return { resource: uri, app:app, isDirectory: false };
@@ -403,10 +459,14 @@ export class IOTViewer {
 		vscode.commands.registerCommand('IOTViewer.refresh', () => this.treeDataProvider.refresh());
 		vscode.commands.registerCommand('IOTViewer.openFile', resource => this.openResource(resource));
 		vscode.commands.registerCommand('IOTViewer.revealResource', () => this.reveal());
+		
+		vscode.commands.registerCommand('IOTViewer.applicationStart', () => this.applicationStart());
+		vscode.commands.registerCommand('IOTViewer.applicationStop', () => this.applicationStop());
+		vscode.commands.registerCommand('IOTViewer.applicationRestart', () => this.applicationRestart());
 	}
 
 	private openResource(resource: vscode.Uri): void {
-		vscode.window.showTextDocument(resource);
+		vscode.window.showTextDocument(resource, {preserveFocus: true});
 	}
 
 	private reveal(): void {
@@ -414,6 +474,16 @@ export class IOTViewer {
 		if (node) {
 			this.iotViewer.reveal(node);
 		}
+	}
+
+	private applicationStart(): void {
+
+	}
+	private applicationStop(): void {
+
+	}
+	private applicationRestart(): void {
+
 	}
 
 	private getNode(): IOTNode | undefined {

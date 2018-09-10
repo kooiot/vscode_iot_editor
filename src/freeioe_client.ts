@@ -36,9 +36,9 @@ export class WSClient extends events.EventEmitter {
     private device_sn: string | undefined;
     private device_user: string = "";
     private device_password: string = "";
-    private device_apps: Application[] = [];
     private ws_con: FreeIOEWS;
     private connected: boolean = false;
+    private device_in_beta = false;
 
     constructor( options : any ) {
         super();
@@ -68,15 +68,11 @@ export class WSClient extends events.EventEmitter {
     public is_connected() : boolean {
         return this.connected;
     }
-    public apps() : Application[] {
-        return this.device_apps;
-    }
     public get_ws_con() : FreeIOEWS {
         return this.ws_con;
     }
 
     public connect() : Thenable<WSClient> {
-        this.appendOutput('Connect device....');
         return new Promise((c, e) => {
             if (this.connected) {
                 c(this);
@@ -94,6 +90,8 @@ export class WSClient extends events.EventEmitter {
     private on_device_info(sn: string, beta: boolean) {
         if (this.device_sn && this.device_sn !== sn) {
             this.emit('device_sn_diff', sn);
+        } else {
+            this.emit('device_info', sn, beta);
         }
     }
     private on_login(result: boolean, message: string) {
@@ -113,18 +111,15 @@ export class WSClient extends events.EventEmitter {
     private on_disconnected(code: number, reason: string) {
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
         this.connected = false;
+        this.appendOutput(`Device disconnected code: ${code}\t reason:${reason}`);
+        this.emit("disconnect", code, reason);
     }
     private on_ws_message( msg: WSMessage) {
         this.appendOutput(`WebSocket message: ${msg.id} ${msg.code} ${msg.data}`);
     }
     public disconnect() {
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
-        this.connected = false;
-        this.device_apps = [];
-        this.device_ws = "";
-        this.device_sn = "";
         if (this.ws_con !== undefined) {
-            this.appendOutput('Disconnect device....');
             this.ws_con.close();
         }
     }
@@ -136,7 +131,6 @@ export class WSClient extends events.EventEmitter {
                 if (data.result === true) {
                     app.version = 0;
                     app.islocal = 1;
-                    this.device_apps.push(app);
                     c(app);
                 } else {
                     e('Error while create application: ' + data.message);
@@ -148,10 +142,10 @@ export class WSClient extends events.EventEmitter {
         });
     }
 
-    public restart_app(inst: string): Thenable<boolean> {
+    public restart_app(inst: string, reason: string): Thenable<boolean> {
         this.appendOutput(`Restart Application ${inst}`);
 		return new Promise((c, e) => {     
-            return this.stop_app(inst, "Restart Application").then((result)=> {
+            return this.stop_app(inst, reason).then((result)=> {
                 if (result) {
                     setTimeout(async ()=>{
                         this.start_app(inst).then( (result) => {
@@ -219,7 +213,6 @@ export class WSClient extends events.EventEmitter {
                     apps.push(list[k]);
                 }
                 this.appendOutput(`Get Application List Done!`);
-                this.device_apps = apps;
                 c(apps);
             }, (reason) => {
                 this.appendOutput(reason);

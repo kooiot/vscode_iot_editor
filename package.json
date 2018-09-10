@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "Developing application with connected FreeIOE device",
-    "version": "0.2.3",
+    "version": "1.0.0",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",
@@ -19,12 +19,12 @@
     "categories": [
         "Other"
     ],
-    "icon": "images/icon.png",
+    "icon": "media/thingsroot.png",
     "activationEvents": [
         "onView:IOTExplorer",
         "onView:IOTViewer",
         "onCommand:iot_editor.configurationEdit",
-        "workspaceContains:**/iot_editor_properties.json"
+        "workspaceContains:**/freeioe_devices.json"
     ],
     "main": "./out/extension",
     "contributes": {
@@ -36,11 +36,6 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Device is connected."
-                },
-                "iot_editor.auto": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Auto upload when file saved."
                 },
                 "iot_editor.config": {
                     "type": "number",
@@ -65,8 +60,8 @@
                 "title": "Connect to device",
                 "category": "IOT",
                 "icon": {
-                    "light": "./media/icon/connect.svg",
-                    "dark": "./media/icon/connect_inverse.svg"
+                    "light": "./media/light/connect.svg",
+                    "dark": "./media/dark/connect.svg"
                 }
             },
             {
@@ -74,8 +69,8 @@
                 "title": "Disconnect to device",
                 "category": "IOT",
                 "icon": {
-                    "light": "./media/icon/disconnect.svg",
-                    "dark": "./media/icon/disconnect_inverse.svg"
+                    "light": "./media/light/disconnect.svg",
+                    "dark": "./media/dark/disconnect.svg"
                 }
             },
             {
@@ -83,8 +78,8 @@
                 "title": "Select a Configuration...",
                 "category": "IOT",
                 "icon": {
-                    "light": "./media/icon/download.svg",
-                    "dark": "./media/icon/download_inverse.svg"
+                    "light": "./media/light/settings.svg",
+                    "dark": "./media/dark/settings.svg"
                 }
             },
             {
@@ -92,8 +87,8 @@
                 "title": "Edit Configurations...",
                 "category": "IOT",
                 "icon": {
-                    "light": "./media/icon/download.svg",
-                    "dark": "./media/icon/download_inverse.svg"
+                    "light": "./media/light/settings.svg",
+                    "dark": "./media/dark/settings.svg"
                 }
             },
             {
@@ -101,79 +96,48 @@
                 "title": "Create new application...",
                 "category": "IOT",
                 "icon": {
-                    "light": "./media/icon/download.svg",
-                    "dark": "./media/icon/download_inverse.svg"
+                    "light": "./media/light/plus.svg",
+                    "dark": "./media/dark/plus.svg"
                 }
             },
             {
-                "command": "iot_editor.applicationDownload",
-                "title": "Download application...",
-                "category": "IOT",
+                "command": "IOTExplorer.applicationConfig",
+                "title": "Config application...",
                 "icon": {
-                    "light": "./media/icon/download.svg",
-                    "dark": "./media/icon/download_inverse.svg"
+                    "light": "./media/light/settings.svg",
+                    "dark": "./media/dark/settings.svg"
                 }
             },
             {
-                "command": "iot_editor.applicationUpload",
-                "title": "Upload application...",
-                "category": "IOT",
-                "icon": {
-                    "light": "./media/icon/upload.svg",
-                    "dark": "./media/icon/upload_inverse.svg"
-                }
-            },
-            {
-                "command": "iot_editor.applicationStart",
+                "command": "IOTExplorer.applicationStart",
                 "title": "Start application...",
-                "category": "IOT",
                 "icon": {
-                    "light": "./media/icon/download.svg",
-                    "dark": "./media/icon/download_inverse.svg"
+                    "light": "./media/light/play.svg",
+                    "dark": "./media/dark/play.svg"
                 }
             },
             {
-                "command": "iot_editor.applicationStop",
+                "command": "IOTExplorer.applicationStop",
                 "title": "Stop application...",
-                "category": "IOT",
                 "icon": {
-                    "light": "./media/icon/download.svg",
-                    "dark": "./media/icon/download_inverse.svg"
+                    "light": "./media/light/stop.svg",
+                    "dark": "./media/dark/stop.svg"
                 }
             },
             {
-                "command": "iot_editor.applicationRestart",
+                "command": "IOTExplorer.applicationRestart",
                 "title": "Restart application...",
-                "category": "IOT",
                 "icon": {
-                    "light": "./media/icon/download.svg",
-                    "dark": "./media/icon/download_inverse.svg"
-                }
-            },
-            {
-                "command": "iot_editor.fileDownload",
-                "title": "Download file...",
-                "category": "IOT",
-                "icon": {
-                    "light": "./media/icon/download.svg",
-                    "dark": "./media/icon/download_inverse.svg"
-                }
-            },
-            {
-                "command": "iot_editor.fileUpload",
-                "title": "Upload file...",
-                "category": "IOT",
-                "icon": {
-                    "light": "./media/icon/upload.svg",
-                    "dark": "./media/icon/upload_inverse.svg"
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
                 }
             },
             {
                 "command": "IOTExplorer.refresh",
                 "title": "Refresh",
                 "icon": {
-                    "light": "./media/icon/refresh.svg",
-                    "dark": "./media/icon/refresh_inverse.svg"
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
                 }
             },
             {
@@ -185,11 +149,35 @@
                 "title": "Reveal in FTP View"
             },
             {
+                "command": "IOTViewer.applicationStart",
+                "title": "Start application...",
+                "icon": {
+                    "light": "./media/light/play.svg",
+                    "dark": "./media/dark/play.svg"
+                }
+            },
+            {
+                "command": "IOTViewer.applicationStop",
+                "title": "Stop application...",
+                "icon": {
+                    "light": "./media/light/stop.svg",
+                    "dark": "./media/dark/stop.svg"
+                }
+            },
+            {
+                "command": "IOTViewer.applicationRestart",
+                "title": "Restart application...",
+                "icon": {
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
+                }
+            },
+            {
                 "command": "IOTViewer.refresh",
                 "title": "Refresh",
                 "icon": {
-                    "light": "./media/icon/refresh.svg",
-                    "dark": "./media/icon/refresh_inverse.svg"
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
                 }
             },
             {
@@ -199,6 +187,78 @@
             {
                 "command": "IOTViewer.revealResource",
                 "title": "Reveal in FTP View"
+            },
+            {
+                "command": "DeviceViewer.settings",
+                "title": "Edit Settings",
+                "icon": {
+                    "light": "./media/light/settings.svg",
+                    "dark": "./media/dark/settings.svg"
+                }
+            },
+            {
+                "command": "DeviceViewer.refresh",
+                "title": "Refresh",
+                "icon": {
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
+                }
+            },
+            {
+                "command": "DeviceViewer.openFile",
+                "title": "Open Device Configuration"
+            },
+            {
+                "command": "DeviceViewer.revealResource",
+                "title": "Reveal in Device View"
+            },
+            {
+                "command": "DeviceViewer.connect",
+                "title": "Connect to device",
+                "icon": {
+                    "light": "./media/light/connect.svg",
+                    "dark": "./media/dark/connect.svg"
+                }
+            },
+            {
+                "command": "DeviceViewer.disconnect",
+                "title": "Disconnect from device",
+                "icon": {
+                    "light": "./media/light/disconnect.svg",
+                    "dark": "./media/dark/disconnect.svg"
+                }
+            },
+            {
+                "command": "DeviceViewer.applicationConfig",
+                "title": "Config application...",
+                "icon": {
+                    "light": "./media/light/settings.svg",
+                    "dark": "./media/dark/settings.svg"
+                }
+            },
+            {
+                "command": "DeviceViewer.applicationStart",
+                "title": "Start application...",
+                "icon": {
+                    "light": "./media/light/play.svg",
+                    "dark": "./media/dark/play.svg"
+                }
+            },
+            {
+                "command": "DeviceViewer.applicationStop",
+                "title": "Stop application...",
+                "icon": {
+                    "light": "./media/light/stop.svg",
+                    "dark": "./media/dark/stop.svg"
+                }
+            },
+            {
+                "command": "DeviceViewer.applicationRestart",
+                "title": "Restart application...",
+                "icon": {
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
+                }
             }
         ],
         "menus": {
@@ -212,32 +272,28 @@
                     "command": "iot_editor.connect"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
-                    "command": "iot_editor.applicationDownload"
+                    "when": "resourceScheme == 'ioe' &&config.iot_editor.online == true",
+                    "command": "IOTExplorer.applicationStart"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
-                    "command": "iot_editor.applicationUpload"
+                    "when": "resourceScheme == 'ioe' &&config.iot_editor.online == true",
+                    "command": "IOTExplorer.applicationStop"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
-                    "command": "iot_editor.applicationStart"
+                    "when": "resourceScheme == 'ioe' &&config.iot_editor.online == false",
+                    "command": "IOTExplorer.applicationRestart"
                 },
                 {
-                    "when": "config.iot_editor.online == true",
-                    "command": "iot_editor.applicationStop"
+                    "when": "resourceScheme == 'iot' &&config.iot_editor.online == true",
+                    "command": "IOTViewer.applicationStart"
                 },
                 {
-                    "when": "editorIsOpen && config.iot_editor.online == true",
-                    "command": "iot_editor.fileDownload"
+                    "when": "resourceScheme == 'iot' &&config.iot_editor.online == true",
+                    "command": "IOTViewer.applicationStop"
                 },
                 {
-                    "when": "editorIsOpen && config.iot_editor.online == true",
-                    "command": "iot_editor.fileUpload"
-                },
-                {
-                    "when": "config.iot_editor.online == false",
-                    "command": "iot_editor.connect"
+                    "when": "resourceScheme == 'iot' &&config.iot_editor.online == false",
+                    "command": "IOTViewer.applicationRestart"
                 }
             ],
             "view/title": [
@@ -250,19 +306,57 @@
                     "command": "IOTViewer.refresh",
                     "when": "view == IOTViewer",
                     "group": "navigation"
+                },
+                {
+                    "command": "DeviceViewer.settings",
+                    "when": "view == DeviceViewer",
+                    "group": "navigation"
+                },
+                {
+                    "command": "DeviceViewer.refresh",
+                    "when": "view == DeviceViewer",
+                    "group": "navigation"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "DeviceViewer.connect",
+                    "when": "viewItem == 'FreeIOE.Device'"
+                },
+                {
+                    "command": "DeviceViewer.applicationConfig",
+                    "when": "viewItem == 'FreeIOE.Application'"
+                },
+                {
+                    "command": "DeviceViewer.applicationStart",
+                    "when": "viewItem == 'FreeIOE.Application'"
+                },
+                {
+                    "command": "DeviceViewer.applicationStop",
+                    "when": "viewItem == 'FreeIOE.Application'"
+                },
+                {
+                    "command": "DeviceViewer.applicationRestart",
+                    "when": "viewItem == 'FreeIOE.Application'"
+                },
+                {
+                    "command": "IOTExplorer.applicationConfig",
+                    "when": "viewItem == 'IOTExplorer'"
+                },
+                {
+                    "command": "IOTExplorer.applicationStart",
+                    "when": "viewItem == 'IOTExplorer'"
+                },
+                {
+                    "command": "IOTExplorer.applicationStop",
+                    "when": "viewItem == 'IOTExplorer'"
+                },
+                {
+                    "command": "IOTExplorer.applicationRestart",
+                    "when": "viewItem == 'IOTExplorer'"
                 }
             ],
             "editor/title": [
-                {
-                    "when": "config.iot_editor.online == true",
-                    "command": "iot_editor.fileDownload",
-                    "group": "navigation"
-                },
-                {
-                    "when": "config.iot_editor.online == true",
-                    "command": "iot_editor.fileUpload",
-                    "group": "navigation"
-                },
                 {
                     "when": "config.iot_editor.online == false",
                     "command": "iot_editor.connect",
@@ -271,33 +365,43 @@
             ],
             "editor/context": [
                 {
-                    "when": "editorLangId != 'Log' && config.iot_editor.online == false",
+                    "when": "editorLangId != 'Log' && config.iot_editor.online == false && resourceScheme != 'device'",
                     "command": "iot_editor.connect",
                     "group": "1_modification"
                 },
                 {
-                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
-                    "command": "iot_editor.fileDownload",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'device'",
+                    "command": "DeviceViewer.connect",
                     "group": "1_modification"
                 },
                 {
-                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
-                    "command": "iot_editor.fileUpload",
-                    "group": "1_modification"
-                },
-                {
-                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
-                    "command": "iot_editor.applicationRestart",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "command": "IOTExplorer.applicationRestart",
                     "group": "2_iot_editor"
                 },
                 {
-                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
-                    "command": "iot_editor.applicationStart",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "command": "IOTExplorer.applicationStart",
                     "group": "2_iot_editor"
                 },
                 {
-                    "when": "editorLangId != 'Log' && config.iot_editor.online == true",
-                    "command": "iot_editor.applicationStop",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "command": "IOTExplorer.applicationStop",
+                    "group": "2_iot_editor"
+                },
+                {
+                    "when": "editorLangId != 'Log' && resourceScheme == 'iot' && config.iot_editor.online == true",
+                    "command": "IOTViewer.applicationRestart",
+                    "group": "2_iot_editor"
+                },
+                {
+                    "when": "editorLangId != 'Log' && resourceScheme == 'iot' && config.iot_editor.online == true",
+                    "command": "IOTViewer.applicationStart",
+                    "group": "2_iot_editor"
+                },
+                {
+                    "when": "editorLangId != 'Log' && resourceScheme == 'iot' && config.iot_editor.online == true",
+                    "command": "IOTViewer.applicationStop",
                     "group": "2_iot_editor"
                 }
             ]
@@ -307,7 +411,7 @@
                 {
                     "id": "iot_explorer",
                     "title": "FreeIOE Explorer",
-                    "icon": "images/freeioe_explorer.svg"
+                    "icon": "media/freeioe_explorer.svg"
                 }
             ]
         },
@@ -318,8 +422,8 @@
                     "name": "FreeIOE Explorer"
                 },
                 {
-                    "id": "IOTViewer",
-                    "name": "FreeIOE Viewer"
+                    "id": "DeviceViewer",
+                    "name": "FreeIOE Devices"
                 },
                 {
                     "id": "iot-events",

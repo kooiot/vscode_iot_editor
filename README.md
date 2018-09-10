@@ -20,8 +20,8 @@ For example:
 
 This extension contributes the following settings:
 
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+* `iot_editor.enable`: enable/disable this extension
+* `iot_editor.config`: current configuration device selection
 
 ## Known Issues
 
@@ -50,4 +50,9 @@ Fixed log confusion about connection.
 ### 0.2.3
 
 Update extension description and icon image.
+
+### 1.0.0
+
+Using extented view instead of downloading file to local disk.
+Implement device view, application file explorer.
 

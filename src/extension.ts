@@ -4,11 +4,13 @@
 import * as vscode from 'vscode';
 import { Client } from './client';
 import { IOTExplorer, IOTViewer } from './iotExplorer';
+import { DeviceViewer } from './deviceViewer';
 
 let client: Client;
 let intervalTimer: NodeJS.Timer;
 let iot_explorer: IOTExplorer;
 let iot_viewer: IOTViewer;
+let device_viewer: DeviceViewer;
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -24,13 +26,6 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationSelect', configurationSelect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationEdit', configurationEdit));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationCreate', applicationCreate));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationDownload', applicationDownload));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationUpload', applicationUpload));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationRestart', applicationRestart));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationStart', applicationStart));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationStop', applicationStop));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.fileDownload', fileDownload));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.fileUpload', fileUpload));
 
     vscode.workspace.getConfiguration('iot_editor').update('online', false);
     
@@ -38,17 +33,18 @@ export function activate(context: vscode.ExtensionContext) {
         let rootFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders[0];        
         client = new Client(rootFolder);
         iot_explorer = new IOTExplorer(context, client);
-        iot_viewer = new IOTViewer(context, client);
+        //iot_viewer = new IOTViewer(context, client);
+        device_viewer = new DeviceViewer(context, client);
     }
     intervalTimer = setInterval(onInterval, 2500);
 
-    vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
-        if (vscode.workspace.getConfiguration('iot_editor').get('auto') === true) {
-            client.handleFileUploadCommand(e);
-        } else {
-            console.log("this is no auto", vscode.workspace.getConfiguration('iot_editor').get('auto'));
-        }
-    });
+    // vscode.workspace.onDidSaveTextDocument((e: vscode.TextDocument) => {
+    //     if (vscode.workspace.getConfiguration('iot_editor').get('auto') === true) {
+    //         client.handleFileUploadCommand(e);
+    //     } else {
+    //         console.log("this is no auto", vscode.workspace.getConfiguration('iot_editor').get('auto'));
+    //     }
+    // });
     /*
     vscode.workspace.onDidOpenTextDocument((e: vscode.TextDocument) => {
         if (vscode.workspace.getConfiguration('iot_editor').get('auto') === true) {
@@ -118,99 +114,6 @@ function applicationCreate(): void {
         vscode.window.showInformationMessage('Open a folder first to edit configurations');
     } else {
         client.handleApplicationCreateCommand();
-    }
-}
-
-function applicationDownload(): void {
-    onActivationEvent();
-    if (!isFolderOpen()) {
-        vscode.window.showInformationMessage('Open a folder first to edit configurations');
-    } else {
-        client.handleApplicationDownloadCommand();
-    }
-}
-
-function applicationUpload(): void {
-    onActivationEvent();
-    if (!isFolderOpen()) {
-        vscode.window.showInformationMessage('Open a folder first to edit configurations');
-    } else {
-        client.handleApplicationUploadCommand();
-    }
-}
-
-function applicationRestart(): void {
-    onActivationEvent();
-    if (!isFolderOpen()) {
-        vscode.window.showInformationMessage('Open a folder first to edit configurations');
-    } else {
-        let editor = vscode.window.activeTextEditor;
-        if (editor) {
-            client.handleApplicationRestartCommand(editor.document);
-            return;
-        } else {
-            vscode.window.showInformationMessage("What's up?");
-        }
-    }
-}
-
-function applicationStart(): void {
-    onActivationEvent();
-    if (!isFolderOpen()) {
-        vscode.window.showInformationMessage('Open a folder first to edit configurations');
-    } else {
-        let editor = vscode.window.activeTextEditor;
-        if (editor) {
-            client.handleApplicationStartCommand(editor.document);
-            return;
-        } else {
-            vscode.window.showInformationMessage("What's up?");
-        }
-    }
-}
-
-function applicationStop(): void {
-    onActivationEvent();
-    if (!isFolderOpen()) {
-        vscode.window.showInformationMessage('Open a folder first to edit configurations');
-    } else {
-        let editor = vscode.window.activeTextEditor;
-        if (editor) {
-            client.handleApplicationStopCommand(editor.document);
-            return;
-        } else {
-            vscode.window.showInformationMessage("What's up?");
-        }
-    }
-}
-
-function fileDownload(): void {
-    onActivationEvent();
-    if (!isFolderOpen()) {
-        vscode.window.showInformationMessage('Open a folder first to edit configurations');
-    } else {
-        let editor = vscode.window.activeTextEditor;
-        if (editor) {
-            client.handleFileDownloadCommand(editor.document);
-            return;
-        } else {
-            vscode.window.showInformationMessage("What's up?");
-        }
-    }
-}
-
-function fileUpload(): void {
-    onActivationEvent();
-    if (!isFolderOpen()) {
-        vscode.window.showInformationMessage('Open a folder first to edit configurations');
-    } else {
-        let editor = vscode.window.activeTextEditor;
-        if (editor) {
-            client.handleFileUploadCommand(editor.document);
-            return;
-        } else {
-            vscode.window.showInformationMessage("What's up?");
-        }
     }
 }
 

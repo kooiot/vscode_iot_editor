@@ -56,3 +56,7 @@ Update extension description and icon image.
 Using extented view instead of downloading file to local disk.
 Implement device view, application file explorer.
 
+### 1.1.0
+
+Added event viewer.
+Shows the information as json file.

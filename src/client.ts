@@ -6,6 +6,7 @@ import * as configs from "./configurations";
 import * as freeioe_client  from './freeioe_client';
 import { UI, getUI } from './ui';
 import { DataBinding } from './dataBinding';
+import { WSAppEvent, WSEvent } from './freeioe_ws';
 
 let ui: UI;
 
@@ -190,7 +191,7 @@ export class Client {
                 e(`Client is not exists!`);
                 return;
             }
-            if (!client.is_connected()) {
+            if (!client.Connected) {
                 client.once('ready', () => {
                     c(client);
                 });
@@ -243,12 +244,18 @@ export class Client {
                 vscode.window.showInformationMessage(`Device disconnected! code:${code} reason:${reason}`);
                 this.refresh_views();
             });
+            this.ws_client.on("app_event", (event: WSAppEvent) => { this.refresh_views(); });
+            this.ws_client.on("event", (event: WSEvent) => { this.refresh_event_view(); });
             this.ws_client.connect();
         }
     }
     private refresh_views() : void {
-        vscode.commands.executeCommand('DeviceViewer.refresh');
+        vscode.commands.executeCommand('IOTEventViewer.refresh');
+        vscode.commands.executeCommand('IOTDeviceViewer.refresh');
         vscode.commands.executeCommand('IOTExplorer.refresh');
+    }
+    private refresh_event_view() : void {
+        vscode.commands.executeCommand('IOTEventViewer.refresh');
     }
     private on_device_sn_diff(remote_sn: string) {
         if (!this.device_sn) {

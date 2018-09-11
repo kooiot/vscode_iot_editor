@@ -10,6 +10,19 @@ export interface WSMessage {
     code: string;
     data: any;
 }
+export interface WSEvent {
+    type: string;
+    app: string;
+    level: number;
+    info: string;
+    data: any;
+}
+export interface WSAppEvent {
+    app: string;
+    event: string;
+    data: any;
+}
+
 type WSCallback = (msg: WSMessage) => void;
 
 export class FreeIOEWS extends events.EventEmitter {
@@ -25,6 +38,8 @@ export class FreeIOEWS extends events.EventEmitter {
 
     // Events
     // on(event: 'message', listener: (this: WsConn, msg : WSMessage) => void): this;
+    // on(event: 'event', listener: (this: WsConn, event: WSEvent) => void): this;
+    // on(event: 'app_event', listener: (this: WsConn, event: WSAppEvent) => void): this;
     // on(event: 'login' , listener: (this: WsConn, result: boolean, message: string) => void): this;
     // on(event: 'close', listener: (this: WsConn, code: number, reason: string) => void): this;
     // on(event: 'console' | 'comm' | 'log', listener: (this: WsConn, data: string) => void): this;
@@ -153,13 +168,17 @@ export class FreeIOEWS extends events.EventEmitter {
         } 
         else if (msg.code === 'event') {
             let tm = this.formatDateTime(<number>msg.data.timestamp * 1000);
-            let data_data = JSON.stringify(msg.data.data);
-            this.appendLog(`[${tm}] [${msg.data.type}] [${msg.data.app}] [${msg.data.level}] ${msg.data.info} ${data_data}`);
+            let data: WSEvent = Object.assign({}, msg.data);
+            let data_data = JSON.stringify(data.data);
+            this.appendLog(`[${tm}] [${data.type}] [${data.app}] [${data.level}] ${data.info} ${data_data}`);
+            this.emit("event", data);
         } 
         else if (msg.code === 'app_event') {
-            // let tm = this.formatDateTime(<number>msg.data.timestamp * 1000);
-            // let data_data = JSON.stringify(msg.data.data);
-            // this.appendLog(`[${tm}] [${msg.data.type}] [${msg.data.app}] [${msg.data.level}] ${msg.data.info} ${data_data}`);
+            let tm = this.formatDateTime(<number>msg.data.timestamp * 1000);
+            let data: WSAppEvent = Object.assign({}, msg.data);
+            let data_data = JSON.stringify(data.data);
+            this.appendLog(`[${tm}] [${data.app}] [${data.event}]  ${data_data}`);
+            this.emit("app_event", data);
         } 
         else if (msg.code === 'comm') {
             let tm = this.formatDateTime(<number>msg.data.ts * 1000);
@@ -253,6 +272,20 @@ export class FreeIOEWS extends events.EventEmitter {
     public app_list() : Thenable<WSMessage> {
 		return new Promise((c, e) => {
             this.send_ws_message("app_list", {}, (msg) => { c(msg); }, (err) => { e(err); });
+        });
+    }
+
+    public event_list(): Thenable<WSEvent[]> {
+        return new Promise((c, e) => {
+            this.send_ws_message("event_list", {}, (msg) => {
+                let data = msg.data;
+                if (data.result) {
+                    let list: WSEvent[] = Object.assign([], data.data);
+                    c(list);
+                } else {
+                    e(data.message);
+                }
+            }, (err) => { e(err); });
         });
     }
 

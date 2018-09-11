@@ -189,7 +189,7 @@
                 "title": "Reveal in FTP View"
             },
             {
-                "command": "DeviceViewer.settings",
+                "command": "IOTDeviceViewer.settings",
                 "title": "Edit Settings",
                 "icon": {
                     "light": "./media/light/settings.svg",
@@ -197,7 +197,7 @@
                 }
             },
             {
-                "command": "DeviceViewer.refresh",
+                "command": "IOTDeviceViewer.refresh",
                 "title": "Refresh",
                 "icon": {
                     "light": "./media/light/refresh.svg",
@@ -205,15 +205,15 @@
                 }
             },
             {
-                "command": "DeviceViewer.openFile",
+                "command": "IOTDeviceViewer.openFile",
                 "title": "Open Device Configuration"
             },
             {
-                "command": "DeviceViewer.revealResource",
+                "command": "IOTDeviceViewer.revealResource",
                 "title": "Reveal in Device View"
             },
             {
-                "command": "DeviceViewer.connect",
+                "command": "IOTDeviceViewer.connect",
                 "title": "Connect to device",
                 "icon": {
                     "light": "./media/light/connect.svg",
@@ -221,7 +221,7 @@
                 }
             },
             {
-                "command": "DeviceViewer.disconnect",
+                "command": "IOTDeviceViewer.disconnect",
                 "title": "Disconnect from device",
                 "icon": {
                     "light": "./media/light/disconnect.svg",
@@ -229,7 +229,7 @@
                 }
             },
             {
-                "command": "DeviceViewer.applicationConfig",
+                "command": "IOTDeviceViewer.applicationConfig",
                 "title": "Config application...",
                 "icon": {
                     "light": "./media/light/settings.svg",
@@ -237,7 +237,7 @@
                 }
             },
             {
-                "command": "DeviceViewer.applicationStart",
+                "command": "IOTDeviceViewer.applicationStart",
                 "title": "Start application...",
                 "icon": {
                     "light": "./media/light/play.svg",
@@ -245,7 +245,7 @@
                 }
             },
             {
-                "command": "DeviceViewer.applicationStop",
+                "command": "IOTDeviceViewer.applicationStop",
                 "title": "Stop application...",
                 "icon": {
                     "light": "./media/light/stop.svg",
@@ -253,12 +253,28 @@
                 }
             },
             {
-                "command": "DeviceViewer.applicationRestart",
+                "command": "IOTDeviceViewer.applicationRestart",
                 "title": "Restart application...",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
                 }
+            },
+            {
+                "command": "IOTEventViewer.refresh",
+                "title": "Refresh",
+                "icon": {
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
+                }
+            },
+            {
+                "command": "IOTEventViewer.openFile",
+                "title": "Open Device Event"
+            },
+            {
+                "command": "IOTEventViewer.revealResource",
+                "title": "Reveal in Device Event"
             }
         ],
         "menus": {
@@ -308,35 +324,40 @@
                     "group": "navigation"
                 },
                 {
-                    "command": "DeviceViewer.settings",
-                    "when": "view == DeviceViewer",
+                    "command": "IOTDeviceViewer.settings",
+                    "when": "view == IOTDeviceViewer",
                     "group": "navigation"
                 },
                 {
-                    "command": "DeviceViewer.refresh",
-                    "when": "view == DeviceViewer",
+                    "command": "IOTDeviceViewer.refresh",
+                    "when": "view == IOTDeviceViewer",
+                    "group": "navigation"
+                },
+                {
+                    "command": "IOTEventViewer.refresh",
+                    "when": "view == IOTEventViewer",
                     "group": "navigation"
                 }
             ],
             "view/item/context": [
                 {
-                    "command": "DeviceViewer.connect",
+                    "command": "IOTDeviceViewer.connect",
                     "when": "viewItem == 'FreeIOE.Device'"
                 },
                 {
-                    "command": "DeviceViewer.applicationConfig",
+                    "command": "IOTDeviceViewer.applicationConfig",
                     "when": "viewItem == 'FreeIOE.Application'"
                 },
                 {
-                    "command": "DeviceViewer.applicationStart",
+                    "command": "IOTDeviceViewer.applicationStart",
                     "when": "viewItem == 'FreeIOE.Application'"
                 },
                 {
-                    "command": "DeviceViewer.applicationStop",
+                    "command": "IOTDeviceViewer.applicationStop",
                     "when": "viewItem == 'FreeIOE.Application'"
                 },
                 {
-                    "command": "DeviceViewer.applicationRestart",
+                    "command": "IOTDeviceViewer.applicationRestart",
                     "when": "viewItem == 'FreeIOE.Application'"
                 },
                 {
@@ -371,7 +392,7 @@
                 },
                 {
                     "when": "editorLangId != 'Log' && resourceScheme == 'device'",
-                    "command": "DeviceViewer.connect",
+                    "command": "IOTDeviceViewer.connect",
                     "group": "1_modification"
                 },
                 {
@@ -422,11 +443,11 @@
                     "name": "FreeIOE Explorer"
                 },
                 {
-                    "id": "DeviceViewer",
+                    "id": "IOTDeviceViewer",
                     "name": "FreeIOE Devices"
                 },
                 {
-                    "id": "iot-events",
+                    "id": "IOTEventViewer",
                     "name": "Events"
                 }
             ]

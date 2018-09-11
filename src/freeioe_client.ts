@@ -2,7 +2,7 @@
 
 import * as events from 'events';
 import * as vscode from 'vscode';
-import { WSMessage, FreeIOEWS } from './freeioe_ws';
+import { WSMessage, FreeIOEWS, WSAppEvent, WSEvent } from './freeioe_ws';
 
 
 export interface Application {
@@ -38,7 +38,7 @@ export class WSClient extends events.EventEmitter {
     private device_password: string = "";
     private ws_con: FreeIOEWS;
     private connected: boolean = false;
-    private device_in_beta = false;
+    private event_buf: WSEvent[] = [];
 
     constructor( options : any ) {
         super();
@@ -55,6 +55,8 @@ export class WSClient extends events.EventEmitter {
         this.ws_con.on("login",  (result: boolean, message: string) => this.on_login(result, message));
         this.ws_con.on("close",  (code: number, reason: string) => this.on_disconnected(code, reason));
         this.ws_con.on("message", (msg : WSMessage) => this.on_ws_message(msg));
+        this.ws_con.on("event", (event: WSEvent) => this.on_ws_event(event));
+        this.ws_con.on("app_event", (event: WSAppEvent) => this.on_ws_app_event(event));
 
         this.ws_con.on("console", (content: string) => { this.emit("console", content); });
         this.ws_con.on("log", (content: string) => { this.emit("log", content); });
@@ -64,11 +66,23 @@ export class WSClient extends events.EventEmitter {
     private appendOutput(content : string) {
         this.emit('console', content);
     }
+    private on_ws_message( msg: WSMessage) {
+        this.appendOutput(`WebSocket message: ${msg.id} ${msg.code} ${msg.data}`);
+    }
+    private on_ws_event( event: WSEvent) {
+        this.event_buf.push(event);
+    }
+    private on_ws_app_event( event: WSAppEvent) {
+        this.emit("app_event", event);
+    }
 
-    public is_connected() : boolean {
+    public get Connected() : boolean {
         return this.connected;
     }
-    public get_ws_con() : FreeIOEWS {
+    public get Events() : WSEvent[] {
+        return this.event_buf;
+    }
+    public get WS() : FreeIOEWS {
         return this.ws_con;
     }
 
@@ -98,9 +112,16 @@ export class WSClient extends events.EventEmitter {
         vscode.workspace.getConfiguration('iot_editor').update('online', result);
         if (result === true) {
             this.appendOutput('Login successfully!!');
-            this.list_apps();
             this.emit("ready");
             this.connected = true;
+
+            /// Buffer the events
+            this.list_events().then( events => {
+                for (let event of events) {
+                    this.event_buf.push(event);
+                }
+            });
+
         } else {
             this.appendOutput(`Login failed: ${message}`);
             this.disconnect();
@@ -113,9 +134,6 @@ export class WSClient extends events.EventEmitter {
         this.connected = false;
         this.appendOutput(`Device disconnected code: ${code}\t reason:${reason}`);
         this.emit("disconnect", code, reason);
-    }
-    private on_ws_message( msg: WSMessage) {
-        this.appendOutput(`WebSocket message: ${msg.id} ${msg.code} ${msg.data}`);
     }
     public disconnect() {
         vscode.workspace.getConfiguration('iot_editor').update('online', false);
@@ -219,6 +237,11 @@ export class WSClient extends events.EventEmitter {
                 e(reason);
             });
         });
+    }
+
+    public list_events(): Thenable<WSEvent[]> {
+        this.appendOutput(`Get Event List`);
+        return this.ws_con.event_list();
     }
 
     /// root path is "#"

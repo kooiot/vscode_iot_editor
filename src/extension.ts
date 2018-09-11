@@ -3,14 +3,12 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { Client } from './client';
-import { IOTExplorer, IOTViewer } from './iotExplorer';
-import { DeviceViewer } from './deviceViewer';
+import { IOTExplorer } from './iotExplorer';
+import { IOTDeviceViewer } from './deviceViewer';
+import { IOTEventViewer } from './eventViewer';
 
 let client: Client;
 let intervalTimer: NodeJS.Timer;
-let iot_explorer: IOTExplorer;
-let iot_viewer: IOTViewer;
-let device_viewer: DeviceViewer;
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -32,9 +30,10 @@ export function activate(context: vscode.ExtensionContext) {
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
         let rootFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders[0];        
         client = new Client(rootFolder);
-        iot_explorer = new IOTExplorer(context, client);
+        new IOTExplorer(context, client);
         //iot_viewer = new IOTViewer(context, client);
-        device_viewer = new DeviceViewer(context, client);
+        new IOTDeviceViewer(context, client);
+        new IOTEventViewer(context, client);
     }
     intervalTimer = setInterval(onInterval, 2500);
 

@@ -52,12 +52,8 @@ export class IOTModel {
 		return new Promise((c, e) => {
 			return this.get_client().then(client => {
 				let uri = node.resource.scheme + "://" + node.resource.authority + "///" + node.app;
-				let path = node.resource.path.substr(3);
-				path = path.substr(node.app.length);
-				if (path.length === 0) {
-					path = "//";
-				}
-				client.dir_app(node.app, path, false).then( (list: freeioe_client.ApplicationFileNode[]) => {
+				let nn = this.parse_uri(node.resource);
+				client.dir_app(node.app, nn.path, false).then( (list: freeioe_client.ApplicationFileNode[]) => {
 					c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${uri}/${entry.id}`), app: node.app, isDirectory: entry.children !== false }))));
 				}, (reason) => {
 					e(reason);
@@ -81,10 +77,10 @@ export class IOTModel {
 			return basename(n1.resource.fsPath).localeCompare(basename(n2.resource.fsPath));
 		});
 	}
-	private parse_uri(resource: vscode.Uri) : IOTUriNode {
+	public parse_uri(resource: vscode.Uri) : IOTUriNode {
 		let path = resource.path.substr(3);
 		let app = path.split('/')[0];
-		return {app: app, path: path.substr(app.length)};
+		return {app: app, path: path.substr(app.length + 1)};
 	}
 
 	public valid_beta(): Thenable<void> {
@@ -123,12 +119,13 @@ export class IOTModel {
 				}
 				if (oldNode.path === newNode.path) {
 					c(true);
+					return;
 				}
-				if (true) {
-					e('qqqq');
-					c(true);
+				if (dirname(oldNode.path) !== dirname(newNode.path)) {
+					e('Rename only happened in same folder');
+					return;
 				}
-				return client.rename(newNode.app, oldNode.path, newNode.path);
+				return client.rename(newNode.app, oldNode.path, basename(newNode.path));
 			});
 		});
 	}
@@ -143,7 +140,13 @@ export class IOTModel {
 	public createNode(resource: vscode.Uri, type: string) : Thenable<boolean> {
 		return this.get_client().then(client => {
 			let node = this.parse_uri(resource);
-			return client.create(node.app, node.path, type);
+			if (type === 'file') {
+				return client.create_file(node.app, node.path);
+			}
+			if (type === 'directory') {
+				return client.create_directory(node.app, node.path);
+			}
+			return false;
 		});
 	}
 
@@ -330,6 +333,17 @@ export class IOTFileSystemProvider implements vscode.TreeDataProvider<IOTNode>, 
 		});
     }
 
+    createFile(uri: vscode.Uri): void {
+		this.model.valid_beta().then(() => {
+			let folder = uri.with({ path: dirname(uri.path) });
+			this.model.createNode(uri, 'file').then((result: boolean) => {
+				if (result) {
+					this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { type: vscode.FileChangeType.Created, uri });
+				}
+			});
+		});
+    }
+
     // --- manage file events
 
     private _emitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
@@ -407,10 +421,14 @@ export class IOTExplorer {
 		this.iotModel = new IOTModel(device_client, 'ioe');
 
 		this.fileSystemProvider = new IOTFileSystemProvider(this.iotModel);
-		context.subscriptions.push(vscode.workspace.registerFileSystemProvider('ioe', this.fileSystemProvider));
+		context.subscriptions.push(vscode.workspace.registerFileSystemProvider('ioe', this.fileSystemProvider, { isCaseSensitive: true }));
 		this.iotExplorer = vscode.window.createTreeView('IOTExplorer', { treeDataProvider: this.fileSystemProvider });
 
 		vscode.commands.registerCommand('IOTExplorer.refresh', () => this.fileSystemProvider.refresh());
+		vscode.commands.registerCommand('IOTExplorer.new_file', (node: any) => this.new_file(node));
+		vscode.commands.registerCommand('IOTExplorer.new_folder', (node: any) => this.new_folder(node));
+		vscode.commands.registerCommand('IOTExplorer.delete', (node: IOTNode) => this.delete(node));
+		vscode.commands.registerCommand('IOTExplorer.rename', (node: IOTNode) => this.rename(node));
 		vscode.commands.registerCommand('IOTExplorer.openFile', resource => this.openResource(resource));
 		vscode.commands.registerCommand('IOTExplorer.revealResource', () => this.reveal());
 		
@@ -424,6 +442,63 @@ export class IOTExplorer {
 		vscode.window.showTextDocument(resource, {preserveFocus: true});
 	}
 
+	private new_file(item: IOTNode | undefined ) {
+		let cur_item = item ? item : this.iotExplorer.selection[0];
+		if (!cur_item) {
+			return;
+		}
+
+		if (cur_item.isDirectory) {
+			return vscode.window.showInputBox({prompt: "Please input new file name"}).then(new_name => {
+				let new_file: IOTNode = { resource: vscode.Uri.parse(`${cur_item.resource.toString()}/${new_name}`), app:cur_item.app, isDirectory: false }
+				this.fileSystemProvider.createFile(new_file.resource);
+				this.fileSystemProvider.refresh();
+				this.openResource(new_file.resource);
+			});
+		}
+	}
+	private new_folder(item: IOTNode | undefined ) {
+		let cur_item = item ? item : this.iotExplorer.selection[0];
+		if (!cur_item) {
+			return;
+		}
+		
+		if (cur_item.isDirectory) {
+			return vscode.window.showInputBox({ prompt: "Please input new folder name" }).then(new_name => {
+				let new_file: IOTNode = { resource: vscode.Uri.parse(`${cur_item.resource.toString()}/${new_name}`), app: cur_item.app, isDirectory: true }
+				this.fileSystemProvider.createDirectory(new_file.resource);
+				this.fileSystemProvider.refresh();
+			});
+		}
+	}
+	private delete(item: IOTNode) {
+		if (!item) {
+			return;
+		}
+		this.fileSystemProvider.delete(item.resource);
+		this.fileSystemProvider.refresh();
+	}
+	private rename(item: IOTNode) {
+		if (!item) {
+			return;
+		}
+		let old_name = basename(item.resource.path);
+		return vscode.window.showInputBox({prompt: "Please input new name", value: old_name}).then(new_name => {
+			if (new_name !== old_name) {
+				let old_path = item.resource.toString();
+				old_path = old_path.substr(0, old_path.length - old_name.length);
+				let new_uri = vscode.Uri.parse(`${old_path}${new_name}`);
+				this.fileSystemProvider.rename(item.resource, new_uri, {overwrite: false});
+				this.fileSystemProvider.refresh();
+				for (let doc of vscode.workspace.textDocuments) {
+					if (doc.uri === item.resource) {
+						// TODO;
+					}
+				}
+			}
+        });
+	}
+
 	private reveal(): void {
 		const node = this.getNode();
 		if (node) {
@@ -435,9 +510,8 @@ export class IOTExplorer {
 		if (vscode.window.activeTextEditor) {
 			let uri = vscode.window.activeTextEditor.document.uri;
 			if (uri.scheme === 'ioe') {
-				let path = uri.path.substr(3);
-				let app = path.split('/')[0];
-				return { resource: uri, app:app, isDirectory: false };
+				let node = this.iotModel.parse_uri(uri);
+				return { resource: uri, app:node.app, isDirectory: false };
 			}
 		}
 		return undefined;
@@ -490,9 +564,8 @@ export class IOTViewer {
 		if (vscode.window.activeTextEditor) {
 			let uri = vscode.window.activeTextEditor.document.uri;
 			if (uri.scheme === 'iot') {
-				let path = uri.path.substr(3);
-				let app = path.split('/')[0];
-				return { resource: uri, app:app, isDirectory: false };
+				let node = this.iotModel.parse_uri(uri);
+				return { resource: uri, app:node.app, isDirectory: false };
 			}
 		}
 		return undefined;

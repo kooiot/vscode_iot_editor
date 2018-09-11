@@ -2,6 +2,7 @@
 
 import * as events from 'events';
 import * as vscode from 'vscode';
+import {basename, dirname} from 'path';
 import { WSMessage, FreeIOEWS, WSAppEvent, WSEvent } from './freeioe_ws';
 
 
@@ -244,10 +245,9 @@ export class WSClient extends events.EventEmitter {
         return this.ws_con.event_list();
     }
 
-    /// root path is "#"
     public dir_app(inst: string, sub_path: string, recursion: boolean): Thenable<ApplicationFileNode[]>  {
         if (sub_path.length === 0 || sub_path === '/') {
-            sub_path = '#';
+            sub_path = '/';
         }
         this.appendOutput(`Dir Application ${inst} ${sub_path}`);
         return new Promise((c, e) => {
@@ -261,6 +261,9 @@ export class WSClient extends events.EventEmitter {
                 if (data.result !== true) {
                     e(`Dir application failed! ${data.message}`);
                     return;
+                }
+                if (data.content === "[]") {
+                    data.content = [];
                 }
                 let nodes: ApplicationFileNode[] = Object.assign([], data.content);
                 let file_nodes: ApplicationFileNode[] = [];
@@ -307,12 +310,11 @@ export class WSClient extends events.EventEmitter {
                     e(`Download application file failed! ${data.message}`);
                     return;
                 }
-                interface FileContent {
-                    content: string;
-                }
-
-                let fc: FileContent = Object.assign({}, data.content);
-                if (fc.content) {
+                if (data.content !== undefined) {
+                    interface FileContent {
+                        content: string;
+                    }
+                    let fc: FileContent = Object.assign({}, data.content);
                     c(fc.content);
                 } else {
                     e("No file content found!");
@@ -347,21 +349,21 @@ export class WSClient extends events.EventEmitter {
         });
     }
     
-    public rename(inst: string, old_path: string, new_path: string) : Thenable<boolean> {
-        this.appendOutput(`Rename name from ${old_path} to ${new_path}`);
+    public rename(inst: string, path: string, new_basename: string) : Thenable<boolean> {
+        this.appendOutput(`Rename name from ${path} to ${new_basename} under app ${inst}`);
         return new Promise((c, e) => {
             let qs = {
                 app: inst,
                 operation: 'rename_node',
-                id: old_path,
-                text: new_path,
+                id: path,
+                text: new_basename,
             };
             this.ws_con.editor_get(qs).then((msg) => {
                 let data = msg.data;
                 if (data.result !== true) {
-                    this.appendOutput(`Rename node from ${old_path} to ${new_path} failed! ${data.message}`);
+                    this.appendOutput(`Rename node from ${path} to ${new_basename} failed! ${data.message}`);
                 } else {
-                    this.appendOutput(`Rename node from ${old_path} to ${new_path} successed`);
+                    this.appendOutput(`Rename node from ${path} to ${new_basename} successed`);
                 }
                 c(data.result);
             }, (reason) => {
@@ -372,11 +374,11 @@ export class WSClient extends events.EventEmitter {
     }
     
     public delete(inst: string, path: string) : Thenable<boolean> {
-        this.appendOutput(`Delete node ${path}`);
+        this.appendOutput(`Delete node ${path} under app ${inst}`);
         return new Promise((c, e) => {
             let qs = {
                 app: inst,
-                operation: 'rename_node',
+                operation: 'delete_node',
                 id: path
             };
             this.ws_con.editor_get(qs).then((msg) => {
@@ -394,22 +396,48 @@ export class WSClient extends events.EventEmitter {
         });
     }
     
-    // type: file/directory
-    public create(inst: string, path: string, type: string) : Thenable<boolean> {
-        this.appendOutput(`Create folder ${path}`);
+    public create_directory(inst: string, path: string) : Thenable<boolean> {
+        this.appendOutput(`Create directory ${path} under app ${inst}`);
         return new Promise((c, e) => {
             let qs = {
                 app: inst,
                 operation: 'create_node',
                 id: path,
-                type: type
+                type: "directory"
             };
             this.ws_con.editor_get(qs).then((msg) => {
                 let data = msg.data;
                 if (data.result !== true) {
-                    this.appendOutput(`Create folder ${path} failed! ${data.message}`);
+                    this.appendOutput(`Create folder ${path} under app ${inst} failed! ${data.message}`);
                 } else {
-                    this.appendOutput(`Create folder ${path} successed`);
+                    this.appendOutput(`Create folder ${path} under app ${inst} successed`);
+                }
+                c(data.result);
+            }, (reason) => {
+                this.appendOutput(reason);
+                e(reason);
+            });
+        });
+    }
+    
+    public create_file(inst: string, path: string) : Thenable<boolean> {
+        let folder = dirname(path);
+        let filename = basename(path);
+        this.appendOutput(`Create file ${path} under app ${inst}`);
+        return new Promise((c, e) => {
+            let qs = {
+                app: inst,
+                operation: 'create_node',
+                id: folder,
+                text: filename,
+                type: "file"
+            };
+            this.ws_con.editor_get(qs).then((msg) => {
+                let data = msg.data;
+                if (data.result !== true) {
+                    this.appendOutput(`Create file ${path} under app ${inst} failed! ${data.message}`);
+                } else {
+                    this.appendOutput(`Create file ${path} under app ${inst} successed`);
                 }
                 c(data.result);
             }, (reason) => {
@@ -420,7 +448,7 @@ export class WSClient extends events.EventEmitter {
     }
 
     public stat(inst: string, path: string) : Thenable<IOTFileStat> {
-        this.appendOutput(`Stat path ${path}`);
+        this.appendOutput(`Stat path ${path} under app ${inst}`);
         return new Promise((c, e) => {
             let qs = {
                 app: inst,

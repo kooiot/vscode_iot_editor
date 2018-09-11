@@ -60,3 +60,7 @@ Implement device view, application file explorer.
 
 Added event viewer.
 Shows the information as json file.
+
+### 1.1.1
+
+Support New/Rename/Delete File/Folder.

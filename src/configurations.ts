@@ -26,8 +26,8 @@ let defaultSettings: string = `{
 
 export interface DeviceConfig {
     name: string;
-    host?: string;
-    port?: number;
+    host: string;
+    port: number;
     sn?: string;
     user?: string;
     password?: string;

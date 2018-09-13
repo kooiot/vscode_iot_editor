@@ -25,8 +25,7 @@ export class Client {
     private disposables: vscode.Disposable[] = [];
     private configuration: configs.EditorProperties;
     private rootPathFileWatcher: vscode.FileSystemWatcher | undefined;
-    private rootFolder: vscode.WorkspaceFolder | undefined;
-    private trackedDocuments = new Set<vscode.TextDocument>();
+    private rootFolder: string;
     private outputChannel: vscode.OutputChannel | undefined;
     private logChannel: vscode.OutputChannel | undefined;
     private commChannel: vscode.OutputChannel | undefined;
@@ -34,8 +33,6 @@ export class Client {
     private device_host: string = "";
     private device_port: number = 8818;
     private device_sn: string | undefined;
-    private device_user: string | undefined;
-    private device_password: string | undefined;
     private ws_client: freeioe_client.WSClient | undefined;
     private beta_value = false;
 
@@ -50,19 +47,7 @@ export class Client {
      * don't use this.rootFolder directly since it can be undefined
      */
     public get RootPath(): string {
-        return (this.rootFolder) ? this.rootFolder.uri.fsPath : "";
-    }
-    public get RootUri(): vscode.Uri | null {
-        return (this.rootFolder) ? this.rootFolder.uri : null;
-    }
-    public get Name(): string {
-        return this.getName(this.rootFolder);
-    }
-    public get TrackedDocuments(): Set<vscode.TextDocument> {
-        return this.trackedDocuments;
-    }
-    public get WSHost() : string {
-        return `${this.device_host}:${this.device_port}`;
+        return this.rootFolder;
     }
     public get Beta() : boolean {
         return this.beta_value;
@@ -70,11 +55,10 @@ export class Client {
     public get ActiveDevice() : string {
         return this.model.activeConfigName.Value;
     }
-
-    private getName(workspaceFolder?: vscode.WorkspaceFolder): string {
-        return workspaceFolder ? workspaceFolder.name : "untitled";
+    public get ActiveDeviceConfig() : configs.DeviceConfig {
+        return this.configuration.Devices[this.configuration.CurrentDevice];
     }
-    
+
     public onDidChangeSettings(): void {
         // This relies on getNonDefaultSettings being called first.
         console.assert(Object.keys(previousEditorSettings).length > 0);
@@ -94,8 +78,8 @@ export class Client {
     //     return result;
     // }
 
-    constructor( workspaceFolder?: vscode.WorkspaceFolder) {
-        this.rootFolder = workspaceFolder;
+    constructor( rootFolder: string) {
+        this.rootFolder = rootFolder;
         ui = getUI();
         ui.bind(this);
         
@@ -169,9 +153,21 @@ export class Client {
             this.disposables.push(this.logChannel);
         }
     }
+    
+    private activeFsExplorer(): void {
+        vscode.commands.executeCommand('iot_editor.active_fs', this.ActiveDevice, `${this.device_host}:${this.device_port}`);
+    }
+
     public appendOutput(log: string) {
         if (this.outputChannel) {
             this.outputChannel.appendLine(log);
+        }
+    }
+    private appendConsole(log: string) {
+        if (vscode.workspace.getConfiguration('iot_editor').get('debug') === true) {
+            this.appendOutput(log);
+        } else {
+            console.log(log);
         }
     }
     private appendLog(log: string) {
@@ -188,25 +184,25 @@ export class Client {
         return new Promise((c, e) => {
             let client = this.ws_client;
             if (!client) {
-                e(`Client is not exists!`);
-                return;
+                return e(`Client is not exists!`);
             }
             if (!client.Connected) {
-                client.once('ready', () => {
-                    c(client);
-                });
+                // client.once('ready', () => {
+                //     return c(client);
+                // });
                 
-                client.on('error', (message : string) => {
-                    e('Error while connecting: ' + message);
-                });
+                // client.on('error', (message : string) => {
+                //     return e('Error while connecting: ' + message);
+                // });
+                return e('Connecting');
             }
 
-			c(client);
+			return c(client);
 		});
     }
     public get_configs() : Thenable<configs.EditorProperties> {
         return new Promise((c, e) => {
-            c(this.configuration);
+            return c(this.configuration);
         });
     } 
 
@@ -214,20 +210,18 @@ export class Client {
         let conf = this.configuration.Devices[this.configuration.CurrentDevice];
 
         if (conf) {
-            if (this.device_host === conf.host && this.device_port === conf.port && this.device_user === conf.user && this.device_password === conf.password) {
+            if (this.device_host === conf.host && this.device_port === conf.port) {
                 return;
             }
             this.disconnectDevice();
-            this.device_host = conf.host ? conf.host : "127.0.0.1";
-            this.device_port = conf.port ? conf.port : 8818;
+            this.device_host = conf.host;
+            this.device_port = conf.port;
             this.device_sn = conf.sn;
-            this.device_user = conf.user;
-            this.device_password = conf.password;
             this.appendOutput(`Start to connect device: ${this.device_host}:${this.device_port}`);
 
             this.ws_client = new freeioe_client.WSClient(conf);
             this.ws_client.on("device_sn_diff", (remote_sn : string) => this.on_device_sn_diff(remote_sn));
-            this.ws_client.on("console", (content: string) => this.appendOutput(content));
+            this.ws_client.on("console", (content: string) => this.appendConsole(content));
             this.ws_client.on("log", (content: string) => this.appendLog(content));
             this.ws_client.on("comm", (content: string) => this.appendCom(content));
             this.ws_client.on("message", (code: string, data: any) => this.on_ws_message(code, data));
@@ -235,6 +229,7 @@ export class Client {
             this.ws_client.on("ready", () => {
                 vscode.window.showInformationMessage(`Device ${this.device_host}:${this.device_port} connnected!`);
                 this.refresh_views();
+                this.activeFsExplorer();
             });
             this.ws_client.on("error", (message: string) => {
                 vscode.window.showInformationMessage(`Device connnect failed! ${message}`);
@@ -252,7 +247,6 @@ export class Client {
     private refresh_views() : void {
         vscode.commands.executeCommand('IOTEventViewer.refresh');
         vscode.commands.executeCommand('IOTDeviceViewer.refresh');
-        vscode.commands.executeCommand('IOTExplorer.refresh');
     }
     private refresh_event_view() : void {
         vscode.commands.executeCommand('IOTEventViewer.refresh');
@@ -290,8 +284,6 @@ export class Client {
         this.device_host = "";
         this.device_port = 8818;
         this.device_sn = undefined;
-        this.device_user = "";
-        this.device_password = "";
         if (this.ws_client !== undefined) {
             this.appendOutput(`Disconnect from device: ${this.device_host}:${this.device_port}`);
             this.ws_client.disconnect();
@@ -370,7 +362,7 @@ export class Client {
         console.log('Stop Application', inst);
         return this.get_client().then( (client) => {
             client.stop_app(inst, reason).then( (result: boolean) => {
-                vscode.window.showInformationMessage(`Application ${inst} started!`);
+                vscode.window.showInformationMessage(`Application ${inst} stoped!`);
                 this.refresh_views();
             }, (reason) => {
                 vscode.window.showInformationMessage(`Application start failed! ${reason}`);

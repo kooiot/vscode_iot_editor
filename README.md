@@ -64,3 +64,7 @@ Shows the information as json file.
 ### 1.1.1
 
 Support New/Rename/Delete File/Folder.
+
+### 1.2.0
+
+Using FileSystemProvider instread of customized viewer.

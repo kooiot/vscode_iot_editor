@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "Developing application with connected FreeIOE device",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",
@@ -22,10 +22,9 @@
     ],
     "icon": "media/thingsroot.png",
     "activationEvents": [
-        "onView:IOTExplorer",
-        "onView:IOTViewer",
-        "onCommand:iot_editor.configurationEdit",
-        "workspaceContains:**/freeioe_devices.json"
+        "onFileSystem:ioe",
+        "onCommand:iot_editor.workspaceInit",
+        "workspaceContains:.vscode/freeioe_devices.json"
     ],
     "main": "./out/extension",
     "contributes": {
@@ -46,7 +45,12 @@
                 "iot_editor.debug": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Debug mode"
+                    "description": "Debug mode, which shows more information about communication with device"
+                },
+                "iot_editor.refresh_device_info": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Auto refresh connected device information (this cause fetch device information every 2.5 seconds)."
                 }
             }
         },
@@ -54,6 +58,16 @@
             {
                 "command": "iot_editor.aboutEditor",
                 "title": "About IOT Editor...",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.workspaceInit",
+                "title": "Setup editor workspace",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.active_fs",
+                "title": "Active FileSystem provider",
                 "category": "IOT"
             },
             {
@@ -134,52 +148,12 @@
                 }
             },
             {
-                "command": "IOTExplorer.refresh",
-                "title": "Refresh",
+                "command": "IOTExplorer.reload",
+                "title": "Reload content",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
                 }
-            },
-            {
-                "command": "IOTExplorer.new_file",
-                "title": "New File",
-                "icon": {
-                    "light": "./media/light/file_new.svg",
-                    "dark": "./media/dark/file_new.svg"
-                }
-            },
-            {
-                "command": "IOTExplorer.new_folder",
-                "title": "New Folder",
-                "icon": {
-                    "light": "./media/light/folder.svg",
-                    "dark": "./media/dark/folder.svg"
-                }
-            },
-            {
-                "command": "IOTExplorer.delete",
-                "title": "Delete",
-                "icon": {
-                    "light": "./media/light/trash.svg",
-                    "dark": "./media/dark/trash.svg"
-                }
-            },
-            {
-                "command": "IOTExplorer.rename",
-                "title": "Rename",
-                "icon": {
-                    "light": "./media/light/trash.svg",
-                    "dark": "./media/dark/trash.svg"
-                }
-            },
-            {
-                "command": "IOTExplorer.openFile",
-                "title": "Open IOT Application File"
-            },
-            {
-                "command": "IOTExplorer.revealResource",
-                "title": "Reveal in FTP View"
             },
             {
                 "command": "IOTViewer.applicationStart",
@@ -214,6 +188,14 @@
                 }
             },
             {
+                "command": "IOTViewer.reload",
+                "title": "Reload content",
+                "icon": {
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
+                }
+            },
+            {
                 "command": "IOTViewer.openFile",
                 "title": "Open IOT Application File"
             },
@@ -232,6 +214,14 @@
             {
                 "command": "IOTDeviceViewer.refresh",
                 "title": "Refresh",
+                "icon": {
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
+                }
+            },
+            {
+                "command": "IOTDeviceViewer.reload",
+                "title": "Reload content",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
@@ -302,6 +292,14 @@
                 }
             },
             {
+                "command": "IOTEventViewer.reload",
+                "title": "Reload content",
+                "icon": {
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
+                }
+            },
+            {
                 "command": "IOTEventViewer.openFile",
                 "title": "Open Device Event"
             },
@@ -313,6 +311,10 @@
         "menus": {
             "commandPalette": [
                 {
+                    "when": "workbenchState == workspace",
+                    "command": "iot_editor.workspaceInit"
+                },
+                {
                     "when": "config.iot_editor.debug == true",
                     "command": "iot_editor.aboutEditor"
                 },
@@ -321,49 +323,34 @@
                     "command": "iot_editor.connect"
                 },
                 {
-                    "when": "resourceScheme == 'ioe' &&config.iot_editor.online == true",
+                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
                     "command": "IOTExplorer.applicationStart"
                 },
                 {
-                    "when": "resourceScheme == 'ioe' &&config.iot_editor.online == true",
+                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
                     "command": "IOTExplorer.applicationStop"
                 },
                 {
-                    "when": "resourceScheme == 'ioe' &&config.iot_editor.online == false",
+                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == false",
                     "command": "IOTExplorer.applicationRestart"
                 },
                 {
-                    "when": "resourceScheme == 'iot' &&config.iot_editor.online == true",
+                    "when": "resourceScheme == 'iot' && config.iot_editor.online == true",
                     "command": "IOTViewer.applicationStart"
                 },
                 {
-                    "when": "resourceScheme == 'iot' &&config.iot_editor.online == true",
+                    "when": "resourceScheme == 'iot' && config.iot_editor.online == true",
                     "command": "IOTViewer.applicationStop"
                 },
                 {
-                    "when": "resourceScheme == 'iot' &&config.iot_editor.online == false",
+                    "when": "resourceScheme == 'iot' && config.iot_editor.online == false",
                     "command": "IOTViewer.applicationRestart"
                 }
             ],
             "view/title": [
                 {
-                    "command": "IOTExplorer.new_file",
-                    "when": "view == IOTExplorer",
-                    "group": "navigation"
-                },
-                {
-                    "command": "IOTExplorer.new_folder",
-                    "when": "view == IOTExplorer",
-                    "group": "navigation"
-                },
-                {
-                    "command": "IOTExplorer.refresh",
-                    "when": "view == IOTExplorer",
-                    "group": "navigation"
-                },
-                {
                     "command": "IOTViewer.refresh",
-                    "when": "view == IOTViewer",
+                    "when": "view == IOTViewer && config.iot_editor.online == true",
                     "group": "navigation"
                 },
                 {
@@ -378,8 +365,35 @@
                 },
                 {
                     "command": "IOTEventViewer.refresh",
-                    "when": "view == IOTEventViewer",
+                    "when": "view == IOTEventViewer && config.iot_editor.online == true",
                     "group": "navigation"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "IOTExplorer.reload",
+                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "group": "7_modification"
+                },
+                {
+                    "command": "IOTExplorer.applicationStart",
+                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "group": "1_application"
+                },
+                {
+                    "command": "IOTExplorer.applicationStop",
+                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "group": "1_application"
+                },
+                {
+                    "command": "IOTExplorer.applicationRestart",
+                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "group": "1_application"
+                },
+                {
+                    "command": "IOTExplorer.applicationConfig",
+                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "group": "z_application"
                 }
             ],
             "view/item/context": [
@@ -389,64 +403,39 @@
                     "group": "navigation"
                 },
                 {
+                    "command": "IOTDeviceViewer.reload",
+                    "when": "viewItem == 'FreeIOE.Device' && config.iot_editor.online == true",
+                    "group": "navigation"
+                },
+                {
+                    "command": "IOTDeviceViewer.reload",
+                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
+                    "group": "navigation"
+                },
+                {
                     "command": "IOTDeviceViewer.applicationStart",
-                    "when": "viewItem == 'FreeIOE.Application'",
+                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
                     "group": "6_application"
                 },
                 {
                     "command": "IOTDeviceViewer.applicationStop",
-                    "when": "viewItem == 'FreeIOE.Application'",
+                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
                     "group": "6_application"
                 },
                 {
                     "command": "IOTDeviceViewer.applicationRestart",
-                    "when": "viewItem == 'FreeIOE.Application'",
+                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
                     "group": "6_application"
                 },
                 {
                     "command": "IOTDeviceViewer.applicationConfig",
-                    "when": "viewItem == 'FreeIOE.Application'",
+                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
                     "group": "9_application"
                 },
                 {
-                    "command": "IOTExplorer.new_file",
-                    "when": "viewItem == 'IOTExplorer'",
+                    "command": "IOTEventViewer.reload",
+                    "when": "viewItem == 'FreeIOE.Event'",
                     "group": "navigation"
-                },
-                {
-                    "command": "IOTExplorer.new_folder",
-                    "when": "viewItem == 'IOTExplorer'",
-                    "group": "navigation"
-                },
-                {
-                    "command": "IOTExplorer.rename",
-                    "when": "viewItem == 'IOTExplorer'",
-                    "group": "7_modification"
-                },
-                {
-                    "command": "IOTExplorer.delete",
-                    "when": "viewItem == 'IOTExplorer'",
-                    "group": "7_modification"
-                },
-                {
-                    "command": "IOTExplorer.applicationStart",
-                    "when": "viewItem == 'IOTExplorer'",
-                    "group": "6_application"
-                },
-                {
-                    "command": "IOTExplorer.applicationStop",
-                    "when": "viewItem == 'IOTExplorer'",
-                    "group": "6_application"
-                },
-                {
-                    "command": "IOTExplorer.applicationRestart",
-                    "when": "viewItem == 'IOTExplorer'",
-                    "group": "6_application"
-                },
-                {
-                    "command": "IOTExplorer.applicationConfig",
-                    "when": "viewItem == 'IOTExplorer'",
-                    "group": "9_application"
                 }
             ],
             "editor/title": [
@@ -509,11 +498,7 @@
             ]
         },
         "views": {
-            "iot_explorer": [
-                {
-                    "id": "IOTExplorer",
-                    "name": "FreeIOE Explorer"
-                },
+            "explorer": [
                 {
                     "id": "IOTDeviceViewer",
                     "name": "FreeIOE Devices"
@@ -521,6 +506,12 @@
                 {
                     "id": "IOTEventViewer",
                     "name": "Events"
+                }
+            ],
+            "iot_explorer": [
+                {
+                    "id": "IOTViewer",
+                    "name": "FreeIOE Files Viewer"
                 }
             ]
         }

@@ -239,6 +239,12 @@ export class FreeIOEWS extends events.EventEmitter {
         });
     }
 
+    public device_info() : Thenable<WSMessage> {
+        return new Promise((c, e) => {
+            this.send_ws_message("device_info", {}, (msg) => { c(msg); }, (err) => { e(err); });
+        });
+    }
+
     public app_new(app:string, inst:string) : Thenable<WSMessage> {
 		return new Promise((c, e) => {
             let data = {

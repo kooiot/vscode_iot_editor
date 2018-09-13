@@ -21,13 +21,7 @@ export class IOTEventModel {
 	}
 
 	public get_client(): Thenable<freeioe_client.WSClient> {
-		return new Promise((c, e) => {
-			this.client.get_client().then( client => {
-				c(client);
-			}, (reason) => {
-                e(reason);
-            });
-		});
+		return this.client.get_client().then(client => client);
 	}
 	
 	public get root() : EventNode[] {
@@ -39,23 +33,21 @@ export class IOTEventModel {
 		return list;
 	}
 
-    public get events(): Thenable<EventNode[]> {
-		return new Promise((c, e) => {
-        	return this.client.get_client().then( client => {
+	public get events(): Thenable<EventNode[]> {
+		return this.client.get_client().then(client => {
+			return new Promise((c, e) => {
 				let list: EventNode[] = [];
 				let events = client.Events;
-				for (var i = 0; i < events.length; i ++) {
-                    list.push({
+				for (var i = 0; i < events.length; i++) {
+					list.push({
 						resource: vscode.Uri.parse(`freeioe_event://${this.client.ActiveDevice}/${i}.json`),
 						label: events[i].info,
 						event: events[i],
-                    });
-                }
-                c(list);
-            }, (reason) => {
-				e(reason);
+					});
+				}
+				return c(list);
 			});
-        });
+		});
 	}
 	
 	public getChildren(node: EventNode): EventNode[] |  Thenable<EventNode[]> {
@@ -80,10 +72,16 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<EventNode
 	private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
 	readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
 
+	private _onDidChange: vscode.EventEmitter<vscode.Uri> = new vscode.EventEmitter<vscode.Uri>();
+	readonly onDidChange: vscode.Event<vscode.Uri> = this._onDidChange.event;
+
 	constructor(private context: vscode.ExtensionContext, private readonly model: IOTEventModel) { }
 
 	public refresh(): any {
 		this._onDidChangeTreeData.fire();
+	}
+	public reload(node: EventNode): any {
+		this._onDidChange.fire(node.resource);
 	}
 
 	public getTreeItem(element: EventNode): vscode.TreeItem {
@@ -157,6 +155,7 @@ export class IOTEventViewer {
 		this.iotViewer = vscode.window.createTreeView('IOTEventViewer', { treeDataProvider: this.treeDataProvider });
 
 		vscode.commands.registerCommand('IOTEventViewer.refresh', () => this.treeDataProvider.refresh());
+		vscode.commands.registerCommand('IOTEventViewer.reload', (node) => this.treeDataProvider.reload(node));
 		vscode.commands.registerCommand('IOTEventViewer.openFile', resource => this.openResource(resource));
 		vscode.commands.registerCommand('IOTEventViewer.revealResource', () => this.reveal());
 	}
@@ -180,5 +179,9 @@ export class IOTEventViewer {
 			}
 		}
 		return undefined;
+	}
+
+	public onInterval() {
+		//this.treeDataProvider.onInterval();
 	}
 }

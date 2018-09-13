@@ -4,6 +4,7 @@ import * as events from 'events';
 import * as vscode from 'vscode';
 import {basename, dirname} from 'path';
 import { WSMessage, FreeIOEWS, WSAppEvent, WSEvent } from './freeioe_ws';
+import { DeviceConfig }  from './configurations';
 
 
 export interface Application {
@@ -31,27 +32,28 @@ export interface IOTFileStat {
     size: number;
 }
 
+export interface DeviceInfo {
+    config: DeviceConfig;
+    device: Object;
+}
+
 export class WSClient extends events.EventEmitter {
     private disposables: vscode.Disposable[] = [];
-    private device_ws: string = "";
-    private device_sn: string | undefined;
-    private device_user: string = "";
-    private device_password: string = "";
+    //private config: DeviceConfig;
     private ws_con: FreeIOEWS;
     private connected: boolean = false;
     private event_buf: WSEvent[] = [];
 
-    constructor( options : any ) {
+    constructor( private config : DeviceConfig ) {
         super();
+        //this.config = Object.assign({}, config);
+        let host = this.config.host ? this.config.host : "127.0.0.1";
+        let port = this.config.port ? this.config.port : 8818;
+        let device_ws = "ws://" + host + ":" + port;
+        let user = config.user ? config.user : "admin";
+        let password = config.password ? config.password : "admin1";
 
-        let host: string = options.host ? options.host : "127.0.0.1";
-        let port: number = options.port ? options.port : 8818;
-        this.device_ws = "ws://" + host + ":" + port;
-        this.device_sn = options.sn;
-        this.device_user = options.user ? options.user : "admin";
-        this.device_password = options.password ? options.password : "admin1";
-
-        this.ws_con = new FreeIOEWS(this.device_ws, this.device_user, this.device_password);
+        this.ws_con = new FreeIOEWS(device_ws, user, password);
         this.ws_con.on("info", (sn: string, beta: boolean) => this.on_device_info(sn, beta));
         this.ws_con.on("login",  (result: boolean, message: string) => this.on_login(result, message));
         this.ws_con.on("close",  (code: number, reason: string) => this.on_disconnected(code, reason));
@@ -90,20 +92,21 @@ export class WSClient extends events.EventEmitter {
     public connect() : Thenable<WSClient> {
         return new Promise((c, e) => {
             if (this.connected) {
-                c(this);
+                return c(this);
             } else {
                 this.ws_con.connect();
                 this.once('ready', () => {
-                    c(this);
+                    return c(this);
                 });
                 this.once('error', (message: string) => {
-                    e(message);
+                    this.appendOutput(`Login error ${message}`);
+                    return e(message);
                 });
             }
         });
     }
     private on_device_info(sn: string, beta: boolean) {
-        if (this.device_sn && this.device_sn !== sn) {
+        if (this.config.sn && this.config.sn !== sn) {
             this.emit('device_sn_diff', sn);
         } else {
             this.emit('device_info', sn, beta);
@@ -142,90 +145,76 @@ export class WSClient extends events.EventEmitter {
             this.ws_con.close();
         }
     }
-    
-    public create_app(app: Application) : Thenable<Application> {
-		return new Promise((c, e) => {
-            this.ws_con.app_new(app.name, app.inst).then(msg => {
+
+    public device_info() : Thenable<Object> {
+        this.appendOutput('Get device info');
+		return this.ws_con.device_info().then(msg => { return { config: this.config, device: Object.assign({}, msg.data) }; });
+    }
+
+    public create_app(app: Application): Thenable<Application> {
+        this.appendOutput(`Create Application ${app.inst} ${app.name}`);
+        return this.ws_con.app_new(app.name, app.inst).then(msg => {
+            return new Promise((c, e) => {
                 let data = msg.data;
                 if (data.result === true) {
                     app.version = 0;
                     app.islocal = 1;
-                    c(app);
+                    return c(app);
                 } else {
-                    e('Error while create application: ' + data.message);
+                    this.appendOutput(`Create Application error ${data.message}`);
+                    return e('Error while create application: ' + data.message);
                 }
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
             });
         });
     }
 
     public restart_app(inst: string, reason: string): Thenable<boolean> {
-        this.appendOutput(`Restart Application ${inst}`);
-		return new Promise((c, e) => {     
-            return this.stop_app(inst, reason).then((result)=> {
-                if (result) {
-                    setTimeout(async ()=>{
-                        this.start_app(inst).then( (result) => {
-                            c(result);
-                        }, (reason) => {
-                            e(reason);
-                        });
-                    }, 1000);
-                } else {
-                    e('Failed to stop application');
-                }
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
+        this.appendOutput(`Restart Application ${inst}`);   
+        return this.stop_app(inst, reason).then((result) => {
+            return new Promise((c, e) => {
+                return result ? this.start_app(inst) : false;
             });
         });
     }
     public start_app(inst: string): Thenable<boolean> {
         this.appendOutput(`Start Application ${inst}`);
-		return new Promise((c, e) => {       
-            return this.ws_con.app_start(inst).then( (msg) => {
+        return this.ws_con.app_start(inst).then((msg) => {
+            return new Promise((c, e) => {
                 let data = msg.data;
                 if (data.result === true) {
-                    c(data.result);
+                    return c(data.result);
                 } else {
-                    e('Error while create application: ' + data.message);
+                    this.appendOutput(`Start Application error ${data.message}`);
+                    return e('Error while start application: ' + data.message);
                 }
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
             });
         });
     }
     public stop_app(inst: string, reason: string): Thenable<boolean> {
-        this.appendOutput(`Stop Application ${inst}`);
-		return new Promise((c, e) => {       
-            return this.ws_con.app_stop(inst, reason).then( (msg) => {
+        this.appendOutput(`Stop Application ${inst}`); 
+        return this.ws_con.app_stop(inst, reason).then((msg) => {
+            return new Promise((c, e) => {
                 let data = msg.data;
                 if (data.result === true) {
-                    c(data.result);
+                    return c(data.result);
                 } else {
-                    e('Error while create application: ' + data.message);
+                    this.appendOutput(`Stop Application error ${data.message}`);
+                    return e('Error while stop application: ' + data.message);
                 }
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
             });
         });
     }
 
     public list_apps(): Thenable<Application[]> {
         this.appendOutput(`Get Application List`);
-
-        return new Promise((c, e) => {
-            this.ws_con.app_list().then( (msg) => {
+        return this.ws_con.app_list().then((msg) => {
+            return new Promise((c, e) => {
                 let data = msg.data;
                 interface AppList { [key: string]: Application; }
-    
+
                 let list: AppList = Object.assign({}, data);
                 let apps: Application[] = [];
-                for(let k in list) {
+                for (let k in list) {
                     if (!list[k].inst) {
                         list[k].inst = k;
                     }
@@ -233,9 +222,6 @@ export class WSClient extends events.EventEmitter {
                 }
                 this.appendOutput(`Get Application List Done!`);
                 c(apps);
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
             });
         });
     }
@@ -250,17 +236,17 @@ export class WSClient extends events.EventEmitter {
             sub_path = '/';
         }
         this.appendOutput(`Dir Application ${inst} ${sub_path}`);
-        return new Promise((c, e) => {
-            let qs = {
-                app: inst,
-                operation: 'get_node',
-                id: sub_path
-            };
-            this.ws_con.editor_get(qs).then((msg) => {
+        let qs = {
+            app: inst,
+            operation: 'get_node',
+            id: sub_path
+        };
+        return this.ws_con.editor_get(qs).then((msg) => {
+            return new Promise((c, e) => {
                 let data = msg.data;
                 if (data.result !== true) {
-                    e(`Dir application failed! ${data.message}`);
-                    return;
+                    this.appendOutput(`Dir Application error ${data.message}`);
+                    return e(`Dir application failed! ${data.message}`);
                 }
                 if (data.content === "[]") {
                     data.content = [];
@@ -268,7 +254,7 @@ export class WSClient extends events.EventEmitter {
                 let nodes: ApplicationFileNode[] = Object.assign([], data.content);
                 let file_nodes: ApplicationFileNode[] = [];
                 for (let node of nodes) {
-                    if (typeof(node.children) !== 'boolean') {
+                    if (typeof (node.children) !== 'boolean') {
                         for (let child of node.children) {
                             console.log(child);
                             if (child.type === 'folder' && recursion === true) {
@@ -289,179 +275,118 @@ export class WSClient extends events.EventEmitter {
                         file_nodes.push(node);
                     }
                 }
-                c(nodes);
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
+                return c(nodes);
             });
         });
     }
     public download_file(inst: string, filepath: string): Thenable<string>  {
         this.appendOutput(`Download Application File ${inst} ${filepath}`);
-        return new Promise((c, e) => {
-            let qs = {
-                app: inst,
-                operation: 'get_content',
-                id: filepath
-            };
-            this.ws_con.editor_get(qs).then( (msg) => {
+        let qs = {
+            app: inst,
+            operation: 'get_content',
+            id: filepath
+        };
+        return this.ws_con.editor_get(qs).then((msg) => {
+            return new Promise((c, e) => {
                 let data = msg.data;
                 if (data.result !== true) {
-                    e(`Download application file failed! ${data.message}`);
-                    return;
+                    this.appendOutput(`Download Application file error: ${data.message}`);
+                    return e(`Download application file failed! ${data.message}`);
                 }
                 if (data.content !== undefined) {
                     interface FileContent {
+                        type: string;
                         content: string;
                     }
                     let fc: FileContent = Object.assign({}, data.content);
-                    c(fc.content);
+                    this.appendOutput(`File ${filepath} downloaded`);
+                    return c(fc.content);
                 } else {
-                    e("No file content found!");
+                    this.appendOutput(`Download Application file error: No file content found!`);
+                    return e("No file content found!");
                 }
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
             });
         });
     }
     public upload_file(inst: string, filepath: string, content: string) : Thenable<boolean> {
         this.appendOutput(`Upload Application File ${inst} ${filepath}`);
-        return new Promise((c, e) => {
-            let form = {
-                app: inst,
-                operation: 'set_content_ex',
-                id: filepath,
-                text: content,
-            };
-            this.ws_con.editor_post(form).then((msg) => {
-                let data = msg.data;
-                if (data.result !== true) {
-                    this.appendOutput(`File ${filepath} upload failed! ${data.message}`);
-                } else {
-                    this.appendOutput(`File ${filepath} uploaded`);
-                }
-                c(data.result);
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
-            });
-        });
+        let form = {
+            app: inst,
+            operation: 'set_content_ex',
+            id: filepath,
+            text: content,
+        };
+        return this.ws_con.editor_post(form).then( msg => msg.data.result );
     }
-    
-    public rename(inst: string, path: string, new_basename: string) : Thenable<boolean> {
+
+    public rename(inst: string, path: string, new_basename: string): Thenable<boolean> {
         this.appendOutput(`Rename name from ${path} to ${new_basename} under app ${inst}`);
-        return new Promise((c, e) => {
-            let qs = {
-                app: inst,
-                operation: 'rename_node',
-                id: path,
-                text: new_basename,
-            };
-            this.ws_con.editor_get(qs).then((msg) => {
-                let data = msg.data;
-                if (data.result !== true) {
-                    this.appendOutput(`Rename node from ${path} to ${new_basename} failed! ${data.message}`);
-                } else {
-                    this.appendOutput(`Rename node from ${path} to ${new_basename} successed`);
-                }
-                c(data.result);
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
-            });
-        });
+        let qs = {
+            app: inst,
+            operation: 'rename_node',
+            id: path,
+            text: new_basename,
+        };
+        return this.ws_con.editor_get(qs).then( msg => msg.data.result );
     }
-    
-    public delete(inst: string, path: string) : Thenable<boolean> {
+
+    public delete(inst: string, path: string): Thenable<boolean> {
         this.appendOutput(`Delete node ${path} under app ${inst}`);
-        return new Promise((c, e) => {
-            let qs = {
-                app: inst,
-                operation: 'delete_node',
-                id: path
-            };
-            this.ws_con.editor_get(qs).then((msg) => {
-                let data = msg.data;
-                if (data.result !== true) {
-                    this.appendOutput(`Delete node ${path} failed! ${data.message}`);
-                } else {
-                    this.appendOutput(`Delete node ${path} successed`);
-                }
-                c(data.result);
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
-            });
-        });
+        let qs = {
+            app: inst,
+            operation: 'delete_node',
+            id: path
+        };
+        return this.ws_con.editor_get(qs).then( msg => msg.data.result );
     }
-    
-    public create_directory(inst: string, path: string) : Thenable<boolean> {
+
+    public create_directory(inst: string, path: string): Thenable<boolean> {
         this.appendOutput(`Create directory ${path} under app ${inst}`);
-        return new Promise((c, e) => {
-            let qs = {
-                app: inst,
-                operation: 'create_node',
-                id: path,
-                type: "directory"
-            };
-            this.ws_con.editor_get(qs).then((msg) => {
-                let data = msg.data;
-                if (data.result !== true) {
-                    this.appendOutput(`Create folder ${path} under app ${inst} failed! ${data.message}`);
-                } else {
-                    this.appendOutput(`Create folder ${path} under app ${inst} successed`);
-                }
-                c(data.result);
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
-            });
-        });
+        let qs = {
+            app: inst,
+            operation: 'create_node',
+            id: path,
+            type: "directory"
+        };
+        return this.ws_con.editor_get(qs).then( msg => msg.data.result );
     }
     
     public create_file(inst: string, path: string) : Thenable<boolean> {
         let folder = dirname(path);
         let filename = basename(path);
         this.appendOutput(`Create file ${path} under app ${inst}`);
-        return new Promise((c, e) => {
-            let qs = {
-                app: inst,
-                operation: 'create_node',
-                id: folder,
-                text: filename,
-                type: "file"
-            };
-            this.ws_con.editor_get(qs).then((msg) => {
-                let data = msg.data;
-                if (data.result !== true) {
-                    this.appendOutput(`Create file ${path} under app ${inst} failed! ${data.message}`);
-                } else {
-                    this.appendOutput(`Create file ${path} under app ${inst} successed`);
-                }
-                c(data.result);
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
-            });
-        });
+        let qs = {
+            app: inst,
+            operation: 'create_node',
+            id: folder,
+            text: filename,
+            type: "file"
+        };
+        return this.ws_con.editor_get(qs).then(msg => msg.data.result);
     }
 
-    public stat(inst: string, path: string) : Thenable<IOTFileStat> {
+    public stat(inst: string, path: string): Thenable<IOTFileStat> {
+        if (path.length === 0) {
+            path = "/";
+        }
         this.appendOutput(`Stat path ${path} under app ${inst}`);
-        return new Promise((c, e) => {
-            let qs = {
-                app: inst,
-                operation: 'stat_node',
-                id: path
-            };
-            this.ws_con.editor_get(qs).then((msg) => {
+        let qs = {
+            app: inst,
+            operation: 'stat_node',
+            id: path
+        };
+        return this.ws_con.editor_get(qs).then((msg) => {
+            return new Promise((c, e) => {
                 let data = msg.data;
-                let stat: IOTFileStat = Object.assign({}, data.content);
-                c(stat);
-            }, (reason) => {
-                this.appendOutput(reason);
-                e(reason);
+                interface LocalFileStat {
+                    id: string;
+                    stat: IOTFileStat;
+                }
+                let stat: LocalFileStat = Object.assign({}, data.content);
+                if (!stat.stat || !stat.stat.mode) {
+                    return e(`Stat path ${path} under app ${inst} failed!`);
+                }
+                return c(stat.stat);
             });
         });
 

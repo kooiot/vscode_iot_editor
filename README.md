@@ -20,8 +20,9 @@ For example:
 
 This extension contributes the following settings:
 
-* `iot_editor.enable`: enable/disable this extension
 * `iot_editor.config`: current configuration device selection
+* `iot_editor.debug`: shows more information on output if this is true
+* `iot_editor.refresh_device_info`: auto refresh connected device information.
 
 ## Known Issues
 
@@ -68,3 +69,7 @@ Support New/Rename/Delete File/Folder.
 ### 1.2.0
 
 Using FileSystemProvider instread of customized viewer.
+
+### 1.3.0
+
+Remove online configuration, which makes to much noice on workspace file.

@@ -36,8 +36,6 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationEdit', configurationEdit));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationCreate', applicationCreate));
 
-    vscode.workspace.getConfiguration('iot_editor').update('online', false);
-     
     client = new Client(vscode.workspace.rootPath);
     //iotExplorer = new IOTExplorer(context, client);
     //iotViewr = new IOTViewer(context, client);
@@ -54,8 +52,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 // this method is called when your extension is deactivated
 export function deactivate() {
-    vscode.workspace.getConfiguration('iot_editor').update('online', false);
-
     //iot_explorer.
     clearInterval(intervalTimer);
     client.dispose();
@@ -85,7 +81,6 @@ function activeFsProvider (name: string, uri: string): void {
                 if (wsf.name === name) {
                     //ioeFs.activeUri(base_uri);
                     vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
-                    
                 } else {
                     let result = vscode.workspace.updateWorkspaceFolders(wsf.index, 1, { uri: base_uri, name: name });
                     console.log('updateWorkspaceFolders result', result);

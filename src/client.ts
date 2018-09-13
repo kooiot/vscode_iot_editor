@@ -58,6 +58,15 @@ export class Client {
     public get ActiveDeviceConfig() : configs.DeviceConfig {
         return this.configuration.Devices[this.configuration.CurrentDevice];
     }
+    public get Connected() : boolean {
+        if (!this.ws_client) {
+            return false;
+        }
+        if (!this.ws_client.Connected) {
+            return false;
+        }
+        return true;
+    }
 
     public onDidChangeSettings(): void {
         // This relies on getNonDefaultSettings being called first.
@@ -187,16 +196,8 @@ export class Client {
                 return e(`Client is not exists!`);
             }
             if (!client.Connected) {
-                // client.once('ready', () => {
-                //     return c(client);
-                // });
-                
-                // client.on('error', (message : string) => {
-                //     return e('Error while connecting: ' + message);
-                // });
-                return e('Connecting');
+                return e(`Client is connecting!`);
             }
-
 			return c(client);
 		});
     }
@@ -227,15 +228,18 @@ export class Client {
             this.ws_client.on("message", (code: string, data: any) => this.on_ws_message(code, data));
             this.ws_client.on("device_info", (sn: string, beta: boolean) => this.on_device_info(sn, beta));
             this.ws_client.on("ready", () => {
+                this.appendOutput(`Device ${this.device_host}:${this.device_port} connnected!`);
                 vscode.window.showInformationMessage(`Device ${this.device_host}:${this.device_port} connnected!`);
                 this.refresh_views();
                 this.activeFsExplorer();
             });
             this.ws_client.on("error", (message: string) => {
+                this.appendOutput(`Device connnect failed! ${message}`);
                 vscode.window.showInformationMessage(`Device connnect failed! ${message}`);
                 this.refresh_views();
             });
             this.ws_client.on("disconnect", (code: number, reason: string) => {
+                this.appendOutput(`Device disconnected! code:${code} reason:${reason}`);
                 vscode.window.showInformationMessage(`Device disconnected! code:${code} reason:${reason}`);
                 this.refresh_views();
             });

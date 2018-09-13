@@ -113,7 +113,6 @@ export class WSClient extends events.EventEmitter {
         }
     }
     private on_login(result: boolean, message: string) {
-        vscode.workspace.getConfiguration('iot_editor').update('online', result);
         if (result === true) {
             this.appendOutput('Login successfully!!');
             this.emit("ready");
@@ -134,13 +133,12 @@ export class WSClient extends events.EventEmitter {
         }
     }
     private on_disconnected(code: number, reason: string) {
-        vscode.workspace.getConfiguration('iot_editor').update('online', false);
         this.connected = false;
+        this.event_buf = [];
         this.appendOutput(`Device disconnected code: ${code}\t reason:${reason}`);
         this.emit("disconnect", code, reason);
     }
     public disconnect() {
-        vscode.workspace.getConfiguration('iot_editor').update('online', false);
         if (this.ws_con !== undefined) {
             this.ws_con.close();
         }

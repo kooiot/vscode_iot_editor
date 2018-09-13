@@ -189,6 +189,9 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 
 	// helper functions
 	private valid_path(uri: vscode.Uri) : boolean {
+		if (!this.model.client.Connected) {
+			return false;
+		}
 		let config = this.model.client.ActiveDeviceConfig;
 		if (uri.authority !== `${config.host}:${config.port}`) {
 			return false;

@@ -10,7 +10,8 @@ import * as freeioe_client from './freeioe_client';
 export interface DeviceNode {
 	resource: vscode.Uri;
 	device: boolean;
-	connected?: boolean;
+	enabled?: boolean; // device selection
+	status?: boolean;
 	config?: configs.DeviceConfig;
 	app?: freeioe_client.Application;
 }
@@ -56,7 +57,7 @@ export class DeviceTreeModel {
 	}
 
 	public getDeviceInfo(device: string) : Thenable<Object> {
-		return this.getDevice(device).then( info => info[1] ? this.get_wsclient().then(client => client.device_info()) : info[0]);
+		return this.getDevice(device).then( info => info[1] ? this.get_wsclient().then(client => client.device_info(), reason => info[0]) : info[0]);
 	}
 	
 	public getApplication(device: string, inst: string): Thenable<freeioe_client.Application> {
@@ -88,7 +89,6 @@ export class DeviceTreeModel {
 		return {
 			resource: vscode.Uri.parse(`freeioe://${dev.host}/${dev.name}.json`),
 			device: true,
-			connected: true,
 			config: dev,
 		};
 	}
@@ -101,13 +101,13 @@ export class DeviceTreeModel {
 					list.push({
 						resource: vscode.Uri.parse(`freeioe://${dev.host}/${dev.name}.json`),
 						device: true,
-						connected: false,
 						config: dev,
 					});
 				}
 				let cur_sel = configs.CurrentDevice;
 				if (cur_sel >= 0 && cur_sel < list.length) {
-					list[cur_sel].connected = true;
+					list[cur_sel].status = this.client.Connected;
+					list[cur_sel].enabled = true;
 				}
 				return c(list);
 			});
@@ -118,7 +118,7 @@ export class DeviceTreeModel {
 		if (!node.device) {
 			return [];
 		}
-		if (!node.connected) {
+		if (!node.enabled || !node.status) {
 			return [];
 		}
 
@@ -128,7 +128,7 @@ export class DeviceTreeModel {
 					return c(list.map(entry => ({
 						resource: vscode.Uri.parse(`freeioe_app://${node.resource.authority}${this.remove_ext(node.resource.path)}/${entry.inst}.json`),
 						device: false,
-						connected: entry.running,
+						status: entry.running,
 						app: entry,
 					})));
 				});
@@ -231,7 +231,7 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<DeviceNod
 		return {
 			resourceUri: element.resource,
 			label: element.device ? (element.config ? element.config.name : "Device") : (element.app ? element.app.inst : "Application"),
-            collapsibleState: (element.device && element.connected) ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
+            collapsibleState: (element.device && element.enabled) ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
             iconPath:this.getTreeItemIcon(element),
 			tooltip: this.getTreeItemTooltip(element),
 			contextValue: element.device ? 'FreeIOE.Device' : 'FreeIOE.Application',
@@ -259,10 +259,10 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<DeviceNod
 
 	private getTreeItemIcon(element: DeviceNode) {
 		if (element.device) {
-			if (element.connected) {
+			if (element.enabled) {
 				return {
-					light: this.context.asAbsolutePath(path.join('media', 'light', 'device_link.svg')),
-					dark: this.context.asAbsolutePath(path.join('media', 'dark', 'device_link.svg'))
+					light: this.context.asAbsolutePath(path.join('media', 'light', element.status ? 'device_link.svg' : 'disconnect.svg')),
+					dark: this.context.asAbsolutePath(path.join('media', 'dark', element.status ? 'device_link.svg' : 'disconnect.svg'))
 				};
 			} else {
 				return {
@@ -271,7 +271,7 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<DeviceNod
 				};
 			}
 		} else {
-			if (element.connected) {
+			if (element.status) {
 				return {
 					light: this.context.asAbsolutePath(path.join('media', 'light', 'checked.svg')),
 					dark: this.context.asAbsolutePath(path.join('media', 'dark', 'checked.svg'))
@@ -352,10 +352,10 @@ export class IOTDeviceViewer {
 		if (vscode.window.activeTextEditor) {
 			let uri = vscode.window.activeTextEditor.document.uri;
 			if (uri.scheme === 'freeioe') {
-				return { resource: uri, device: true, connected: false };
+				return { resource: uri, device: true };
 			}
 			if (uri.scheme === 'freeioe_app') {
-				return { resource: uri, device: false, connected: false };
+				return { resource: uri, device: false };
 			}
 		}
 		return undefined;

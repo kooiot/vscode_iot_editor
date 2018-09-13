@@ -32,11 +32,6 @@
             "type": "object",
             "title": "IOT Editor configuration",
             "properties": {
-                "iot_editor.online": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Device is connected."
-                },
                 "iot_editor.config": {
                     "type": "number",
                     "default": -1,
@@ -315,42 +310,40 @@
                     "command": "iot_editor.workspaceInit"
                 },
                 {
-                    "when": "config.iot_editor.debug == true",
                     "command": "iot_editor.aboutEditor"
                 },
                 {
-                    "when": "config.iot_editor.online == false",
                     "command": "iot_editor.connect"
                 },
                 {
-                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "resourceScheme == 'ioe'",
                     "command": "IOTExplorer.applicationStart"
                 },
                 {
-                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "resourceScheme == 'ioe'",
                     "command": "IOTExplorer.applicationStop"
                 },
                 {
-                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == false",
+                    "when": "resourceScheme == 'ioe'",
                     "command": "IOTExplorer.applicationRestart"
                 },
                 {
-                    "when": "resourceScheme == 'iot' && config.iot_editor.online == true",
+                    "when": "resourceScheme == 'iot'",
                     "command": "IOTViewer.applicationStart"
                 },
                 {
-                    "when": "resourceScheme == 'iot' && config.iot_editor.online == true",
+                    "when": "resourceScheme == 'iot'",
                     "command": "IOTViewer.applicationStop"
                 },
                 {
-                    "when": "resourceScheme == 'iot' && config.iot_editor.online == false",
+                    "when": "resourceScheme == 'iot'",
                     "command": "IOTViewer.applicationRestart"
                 }
             ],
             "view/title": [
                 {
                     "command": "IOTViewer.refresh",
-                    "when": "view == IOTViewer && config.iot_editor.online == true",
+                    "when": "view == IOTViewer",
                     "group": "navigation"
                 },
                 {
@@ -365,34 +358,34 @@
                 },
                 {
                     "command": "IOTEventViewer.refresh",
-                    "when": "view == IOTEventViewer && config.iot_editor.online == true",
+                    "when": "view == IOTEventViewer",
                     "group": "navigation"
                 }
             ],
             "explorer/context": [
                 {
                     "command": "IOTExplorer.reload",
-                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "resourceScheme == 'ioe'",
                     "group": "7_modification"
                 },
                 {
                     "command": "IOTExplorer.applicationStart",
-                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "resourceScheme == 'ioe'",
                     "group": "1_application"
                 },
                 {
                     "command": "IOTExplorer.applicationStop",
-                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "resourceScheme == 'ioe'",
                     "group": "1_application"
                 },
                 {
                     "command": "IOTExplorer.applicationRestart",
-                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "resourceScheme == 'ioe'",
                     "group": "1_application"
                 },
                 {
                     "command": "IOTExplorer.applicationConfig",
-                    "when": "resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "resourceScheme == 'ioe'",
                     "group": "z_application"
                 }
             ],
@@ -404,32 +397,32 @@
                 },
                 {
                     "command": "IOTDeviceViewer.reload",
-                    "when": "viewItem == 'FreeIOE.Device' && config.iot_editor.online == true",
+                    "when": "viewItem == 'FreeIOE.Device'",
                     "group": "navigation"
                 },
                 {
                     "command": "IOTDeviceViewer.reload",
-                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
+                    "when": "viewItem == 'FreeIOE.Application'",
                     "group": "navigation"
                 },
                 {
                     "command": "IOTDeviceViewer.applicationStart",
-                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
+                    "when": "viewItem == 'FreeIOE.Application'",
                     "group": "6_application"
                 },
                 {
                     "command": "IOTDeviceViewer.applicationStop",
-                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
+                    "when": "viewItem == 'FreeIOE.Application'",
                     "group": "6_application"
                 },
                 {
                     "command": "IOTDeviceViewer.applicationRestart",
-                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
+                    "when": "viewItem == 'FreeIOE.Application'",
                     "group": "6_application"
                 },
                 {
                     "command": "IOTDeviceViewer.applicationConfig",
-                    "when": "viewItem == 'FreeIOE.Application' && config.iot_editor.online == true",
+                    "when": "viewItem == 'FreeIOE.Application'",
                     "group": "9_application"
                 },
                 {
@@ -438,16 +431,9 @@
                     "group": "navigation"
                 }
             ],
-            "editor/title": [
-                {
-                    "when": "config.iot_editor.online == false",
-                    "command": "iot_editor.connect",
-                    "group": "navigation"
-                }
-            ],
             "editor/context": [
                 {
-                    "when": "editorLangId != 'Log' && config.iot_editor.online == false && resourceScheme != 'device'",
+                    "when": "editorLangId != 'Log' && resourceScheme != 'device'",
                     "command": "iot_editor.connect",
                     "group": "1_modification"
                 },
@@ -457,32 +443,32 @@
                     "group": "1_modification"
                 },
                 {
-                    "when": "editorLangId != 'Log' && resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'ioe'",
                     "command": "IOTExplorer.applicationRestart",
                     "group": "2_iot_editor"
                 },
                 {
-                    "when": "editorLangId != 'Log' && resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'ioe'",
                     "command": "IOTExplorer.applicationStart",
                     "group": "2_iot_editor"
                 },
                 {
-                    "when": "editorLangId != 'Log' && resourceScheme == 'ioe' && config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'ioe'",
                     "command": "IOTExplorer.applicationStop",
                     "group": "2_iot_editor"
                 },
                 {
-                    "when": "editorLangId != 'Log' && resourceScheme == 'iot' && config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'iot'",
                     "command": "IOTViewer.applicationRestart",
                     "group": "2_iot_editor"
                 },
                 {
-                    "when": "editorLangId != 'Log' && resourceScheme == 'iot' && config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'iot'",
                     "command": "IOTViewer.applicationStart",
                     "group": "2_iot_editor"
                 },
                 {
-                    "when": "editorLangId != 'Log' && resourceScheme == 'iot' && config.iot_editor.online == true",
+                    "when": "editorLangId != 'Log' && resourceScheme == 'iot'",
                     "command": "IOTViewer.applicationStop",
                     "group": "2_iot_editor"
                 }

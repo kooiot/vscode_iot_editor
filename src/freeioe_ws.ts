@@ -34,6 +34,7 @@ export class FreeIOEWS extends events.EventEmitter {
     private msg_id: number = 0;
     private callback_map = new Map<number, WSCallback>();
     private reconnect_timer: NodeJS.Timer | undefined;
+    private connected = false;
     private closed = false;
 
     // Events
@@ -60,7 +61,7 @@ export class FreeIOEWS extends events.EventEmitter {
         this.emit('comm', content);
     }
     public connect() {
-        if (this.websocket) {
+        if (this.websocket || this.reconnect_timer) {
             return;
         }
         let ws = new WebSocket(this.address);
@@ -125,13 +126,17 @@ export class FreeIOEWS extends events.EventEmitter {
 
     private on_ws_open() {
         this.appendOutput("WebSocket connection is ready to " + this.address);
+        this.connected = true;
         if (this.websocket) {
             this.websocket.ping("hello world");
         }
     }
     private on_ws_close(code: number, reason: string ) {
         this.appendOutput("WebSocket connection is closed from " + this.address);
-        this.emit('close', code, reason);
+        if (this.connected) {
+            this.emit('close', code, reason);
+        }
+        this.connected = false;
         this.websocket = undefined;
 
         if (this.closed || this.reconnect_timer) {

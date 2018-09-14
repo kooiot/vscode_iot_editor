@@ -73,3 +73,7 @@ Using FileSystemProvider instread of customized viewer.
 ### 1.3.0
 
 Remove online configuration, which makes to much noice on workspace file.
+
+### 1.3.1
+
+Allow multiple devcie connections.

@@ -10,22 +10,32 @@ import * as vscode from 'vscode';
 const configVersion: number = 2;
 
 let defaultSettings: string = `{
+    "version": ${configVersion},
+    "auth_code": "123456789",
     "devices": [
         {
-            "name": "Device",
+            "name": "Device1",
+            "desc": "Device authed by private auth code",
+            "host": "192.168.0.245",
+            "port": 8818,
+            "sn": "",
+        },
+        {
+            "name": "Device2",
+            "desc": "Device authed by username and password",
             "host": "192.168.0.245",
             "port": 8818,
             "sn": "",
             "user": "admin",
             "password": "admin1"
         }
-    ],
-    "version": ${configVersion}
+    ]
 }
 `;
 
 export interface DeviceConfig {
     name: string;
+    desc: string;
     host: string;
     port: number;
     sn?: string;
@@ -34,8 +44,9 @@ export interface DeviceConfig {
 }
 
 interface ConfigurationJson {
-    devices: DeviceConfig[];
     version: number;
+    auth_code: string;
+    devices: DeviceConfig[];
 }
 
 export class EditorProperties {
@@ -89,6 +100,7 @@ export class EditorProperties {
 
     public get DevicesChanged(): vscode.Event<DeviceConfig[]> { return this.devicesChanged.event; }
     public get SelectionChanged(): vscode.Event<number> { return this.selectionChanged.event; }
+    public get AuthCode() : string { return (this.configurationJson) ? this.configurationJson.auth_code : ""; }
     public get Devices(): DeviceConfig[] { return (this.configurationJson) ? this.configurationJson.devices : []; }
     public get CurrentDevice(): number { return this.currentDeviceIndex; }
 
@@ -232,6 +244,12 @@ export class EditorProperties {
             if (!newJson || !newJson.devices || newJson.devices.length === 0) {
                 throw { message: "Invalid configuration file. There must be at least one configuration present in the array." };
             }
+            let tempSet : Set<string> = new Set();
+            newJson.devices.forEach((config: DeviceConfig) => tempSet.add(config.name));
+            if (tempSet.size !== newJson.devices.length) {
+                throw { message: "Invalid configuration file. Duplicated device name found!" };
+            }
+
             if (!this.configurationIncomplete && this.configurationJson && this.configurationJson.devices &&
                 this.CurrentDevice < this.configurationJson.devices.length && this.CurrentDevice !== -1) {
                 for (let i: number = 0; i < newJson.devices.length; i++) {

@@ -40,18 +40,25 @@ export interface DeviceInfo {
 export class WSClient extends events.EventEmitter {
     private disposables: vscode.Disposable[] = [];
     //private config: DeviceConfig;
+    private _beta = false;
     private ws_con: FreeIOEWS;
     private connected: boolean = false;
     private event_buf: WSEvent[] = [];
 
-    constructor( private config : DeviceConfig ) {
+    constructor( private config : DeviceConfig, private auth_code : string ) {
         super();
         //this.config = Object.assign({}, config);
-        let host = this.config.host ? this.config.host : "127.0.0.1";
-        let port = this.config.port ? this.config.port : 8818;
-        let device_ws = "ws://" + host + ":" + port;
-        let user = config.user ? config.user : "admin";
-        let password = config.password ? config.password : "admin1";
+        let device_ws = "ws://" + this.config.host + ":" + this.config.port;
+
+        let user = "admin";
+        let password = "admin1";
+        if (this.config.user && this.config.password) {
+            user = this.config.user;
+            password = this.config.password;
+        } else {
+            user = "AUTH_CODE";
+            password = this.auth_code;
+        }
 
         this.ws_con = new FreeIOEWS(device_ws, user, password);
         this.ws_con.on("info", (sn: string, beta: boolean) => this.on_device_info(sn, beta));
@@ -88,6 +95,24 @@ export class WSClient extends events.EventEmitter {
     public get WS() : FreeIOEWS {
         return this.ws_con;
     }
+    public get Config() : DeviceConfig {
+        return this.config;
+    }
+    public get FsUri() : vscode.Uri {
+        return vscode.Uri.parse(`ioe://${this.config.host}:${this.config.port}/`);
+    }
+    public get EventUri() : vscode.Uri {
+        return vscode.Uri.parse(`freeioe_event://${this.config.host}:${this.config.port}/`);
+    }
+    public get DeviceUri() : vscode.Uri {
+        return vscode.Uri.parse(`freeioe://${this.config.host}:${this.config.port}/${this.config.name}.json`);
+    }
+    public get Beta(): boolean {
+        return this._beta;
+    }
+    public get Name(): string {
+        return this.Config.name;
+    }
 
     public connect() : Thenable<WSClient> {
         return new Promise((c, e) => {
@@ -106,10 +131,9 @@ export class WSClient extends events.EventEmitter {
         });
     }
     private on_device_info(sn: string, beta: boolean) {
+        this._beta = beta;
         if (this.config.sn && this.config.sn !== sn) {
             this.emit('device_sn_diff', sn);
-        } else {
-            this.emit('device_info', sn, beta);
         }
     }
     private on_login(result: boolean, message: string) {
@@ -130,6 +154,7 @@ export class WSClient extends events.EventEmitter {
             this.disconnect();
             this.emit("error", message);
             this.connected = false;
+            this.event_buf = [];
         }
     }
     private on_disconnected(code: number, reason: string) {

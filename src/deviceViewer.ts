@@ -2,7 +2,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as client from './client';
+import * as client from './client_mgr';
 import * as configs from './configurations';
 import * as freeioe_client from './freeioe_client';
 
@@ -16,101 +16,63 @@ export interface DeviceNode {
 	app?: freeioe_client.Application;
 }
 
-interface IOTDeviceNode {
-	device: string;
-	app: string;
-}
 export class DeviceTreeModel {
 
 	//private apps: Map<string, IOTNode> = new Map<string, IOTNode>();
 
-	constructor(readonly client: client.Client) {
-	}
+	constructor(readonly mgr: client.ClientMgr) { }
 
-	public get_wsclient(): Thenable<freeioe_client.WSClient> {
-		return this.client.get_client().then( client => client);
+	private getDeviceInfo(uri: vscode.Uri) : Thenable<Object> {
+		return this.mgr.getClient(uri).then( client => {
+			return client.device_info();
+		},
+		(reason) => {
+			let device = this.get_device(uri);
+			return this.mgr.getDeviceConfig(device);
+		});
 	}
 	
-    public getDevice(name: string) : Thenable<[configs.DeviceConfig,boolean]> {
-		return this.client.get_configs().then( (configs: configs.EditorProperties) => {
-			return new Promise((c, e) => {
-				let index = 0;
-				for (let dev of configs.Devices) {
-					if (dev.name === name) {
-						return c([dev, index === configs.CurrentDevice]);
+	private getApplicationInfo(uri: vscode.Uri): Thenable<freeioe_client.Application> {
+		let inst = this.get_app(uri);
+		if (!inst) {
+			return Promise.reject(`Not an application node ${uri}`);
+		}
+		return this.mgr.getClient(uri).then( client => {
+			return client.list_apps().then((list) => {
+				return new Promise((c, e) => {
+					for (let app of list) {
+						if (app.inst === inst) {
+							return c(app);
+						}
 					}
-					index++;
-				}
-				return e('Device Not Found');
-			});
-		});
-	}
-
-	public validDevice(dev: string): Thenable<void> {
-		return new Promise((c, e) => {
-			if (this.client.ActiveDevice === dev) {
-				return c();
-			} else {
-				return e('Not Valid device');
-			}
-		});
-	}
-
-	public getDeviceInfo(device: string) : Thenable<Object> {
-		return this.getDevice(device).then( info => info[1] ? this.get_wsclient().then(client => client.device_info(), reason => info[0]) : info[0]);
-	}
-	
-	public getApplication(device: string, inst: string): Thenable<freeioe_client.Application> {
-		return this.getDevice(device).then((dev: [configs.DeviceConfig, boolean]) => {
-			return new Promise((c, e) => {
-				if (!dev[1]) {
-					return e(`Device ${device} is not connected!`);
-				} else {
-					return this.get_wsclient().then(client => {
-						return client.list_apps().then((list) => {
-							for (let app of list) {
-								if (app.inst === inst) {
-									return c(app);
-								}
-							}
-							return e(`Application ${inst} not found in device ${device}`);
-						}, (reason) => {
-							return e(reason);
-						});
-					});
-				}
+					return e(`Application ${inst} not found in device ${uri}`);
+				});
 			});
 		});
 	}
 	
-
-	public get ActiveDeviceNode(): DeviceNode {
-		let dev = this.client.ActiveDeviceConfig;
-		return {
-			resource: vscode.Uri.parse(`freeioe://${dev.host}/${dev.name}.json`),
-			device: true,
-			config: dev,
-		};
+	public getInfo(uri: vscode.Uri) {
+		if (uri.scheme === 'freeioe') {
+			return this.getDeviceInfo(uri);
+		} else {
+			return this.getApplicationInfo(uri);
+		}
 	}
 
 	public get roots(): Thenable<DeviceNode[]> {
-		return this.client.get_configs().then((configs: configs.EditorProperties) => {
-			return new Promise((c, e) => {
-				let list: DeviceNode[] = [];
-				for (let dev of configs.Devices) {
-					list.push({
-						resource: vscode.Uri.parse(`freeioe://${dev.host}/${dev.name}.json`),
-						device: true,
-						config: dev,
-					});
-				}
-				let cur_sel = configs.CurrentDevice;
-				if (cur_sel >= 0 && cur_sel < list.length) {
-					list[cur_sel].status = this.client.Connected;
-					list[cur_sel].enabled = true;
-				}
-				return c(list);
-			});
+		return new Promise((c, e) => {
+			let list: DeviceNode[] = [];
+			for (let dev of this.mgr.Devices) {
+				let device_uri = this.mgr.getDeviceUri(dev.name, 'freeioe');
+				list.push({
+					resource: vscode.Uri.parse(`${device_uri}${dev.name}.json`),
+					device: true,
+					enabled: this.mgr.isConnect(dev.name),
+					status: true,
+					config: dev,
+				});
+			}
+			return c(list);
 		});
 	}
 
@@ -118,11 +80,8 @@ export class DeviceTreeModel {
 		if (!node.device) {
 			return [];
 		}
-		if (!node.enabled || !node.status) {
-			return [];
-		}
-
-		return this.get_wsclient().then(client => {
+		
+		return this.mgr.getClient(node.resource).then(client => {
 			return client.list_apps().then((list) => {
 				return new Promise((c, e) => {
 					return c(list.map(entry => ({
@@ -133,25 +92,25 @@ export class DeviceTreeModel {
 					})));
 				});
 			});
+		}, (reason) => {
+			return Promise.resolve([]);
 		});
 	}
 
-	public connect(device_node: DeviceNode): Thenable<void> {
+	public connect(device_node: DeviceNode): Thenable<freeioe_client.WSClient> {
 		let name = device_node.resource.path.substr(1);
-		name = this.remove_ext(name);
-		return this.client.get_configs().then((configs: configs.EditorProperties) => {
-			return new Promise((c, e) => {
-				let index = 0;
-				for (let dev of configs.Devices) {
-					if (dev.name === name) {
-						configs.select(index);
-						return c();
-					}
-					index++;
-				}
-				return e(`Device ${name} not found`);
-			});
-		});
+		let device_name = this.remove_ext(name);
+		return this.mgr.connect(device_name).then( client => client);
+	}
+	public disconnect(device_node: DeviceNode) : void {
+		let name = device_node.resource.path.substr(1);
+		let device_name = this.remove_ext(name);
+		this.mgr.disconnect(device_name);
+	}
+	public setDefault(device_node: DeviceNode) : void {
+		let name = device_node.resource.path.substr(1);
+		let device_name = this.remove_ext(name);
+		this.mgr.setDefaultDevice(device_name);
 	}
 
 	private remove_ext(filename : string) {
@@ -159,46 +118,64 @@ export class DeviceTreeModel {
 		return filename.substr(0, filename.length - ext.length);
 	}
 
-	public parse_uri(resource: vscode.Uri) : IOTDeviceNode {
+	public get_app(resource: vscode.Uri) : string | undefined {
 		let uri_path = resource.path.substr(1);
-		let device = uri_path.split('/')[0];
-		let app = uri_path.split('/')[1];
+		let uri_path_array = uri_path.split('/');
+		//let device = uri_path.split('/')[0];
+		let app = uri_path_array[1];
 		if (app) {
-			app = this.remove_ext(app);
-		} else {
+			return this.remove_ext(app);
+		}
+		return undefined;
+	}
+	public get_device(resource: vscode.Uri) : string {
+		let uri_path = resource.path.substr(1);
+		let uri_path_array = uri_path.split('/');
+		let device = uri_path_array[0];
+		let app = uri_path_array[1];
+		if (!app) {
 			device = this.remove_ext(device);
 		}
-		return {
-			device: device,
-			app: app,
-		};
+		return device;
 	}
 
-	public applicationStart(device_node: DeviceNode): Thenable<void> {
-		let node = this.parse_uri(device_node.resource);
-		return this.validDevice(node.device).then(() => {
-			return this.client.startApplication(node.app);
+	public applicationStart(node: DeviceNode): Thenable<void> {
+		return this.mgr.getClient(node.resource).then(() => {
+			let app = this.get_app(node.resource);
+			if (!app) {
+				return Promise.reject(`Node is not inside an application ${node.resource}`);
+			}
+			return this.mgr.startApplication(node.resource, app);
 		});
 	}
 
-	public applicationStop(device_node: DeviceNode): Thenable<void> {
-		let node = this.parse_uri(device_node.resource);
-		return this.validDevice(node.device).then(() => {
-			return this.client.stopApplication(node.app, 'Stop from IOTExplorer');
+	public applicationStop(node: DeviceNode): Thenable<void> {
+		return this.mgr.getClient(node.resource).then(() => {
+			let app = this.get_app(node.resource);
+			if (!app) {
+				return Promise.reject(`Node is not inside an application ${node.resource}`);
+			}
+			return this.mgr.stopApplication(node.resource, app, 'Stop from IOTExplorer');
 		});
 	}
 
-	public applicationRestart(device_node: DeviceNode): Thenable<void> {
-		let node = this.parse_uri(device_node.resource);
-		return this.validDevice(node.device).then(() => {
-			return this.client.restartApplication(node.app, 'Restart from IOTExplorer');
+	public applicationRestart(node: DeviceNode): Thenable<void> {
+		return this.mgr.getClient(node.resource).then(() => {
+			let app = this.get_app(node.resource);
+			if (!app) {
+				return Promise.reject(`Node is not inside an application ${node.resource}`);
+			}
+			return this.mgr.restartApplication(node.resource, app, 'Restart from IOTExplorer');
 		});
 	}
 
-	public applicationConfig(device_node: DeviceNode): Thenable<void> {
-		let node = this.parse_uri(device_node.resource);
-		return this.validDevice(node.device).then(() => {
-			return this.client.configApplication(node.app);
+	public applicationConfig(node: DeviceNode): Thenable<void> {
+		return this.mgr.getClient(node.resource).then(() => {
+			let app = this.get_app(node.resource);
+			if (!app) {
+				return Promise.reject(`Node is not inside an application ${node.resource}`);
+			}
+			return this.mgr.configApplication(node.resource, app);
 		});
 	}
 }
@@ -216,12 +193,20 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<DeviceNod
 
 	public onInterval() {
         if (vscode.workspace.getConfiguration('iot_editor').get('refresh_device_info') === true) {
-			this._onDidChange.fire(this.model.ActiveDeviceNode.resource);
+			this.model.roots.then( (devices : DeviceNode[]) => {
+				for (let dev of devices) {
+					this._onDidChange.fire(dev.resource);
+				}
+			});
 		}
 	}
 
-	public refresh(): any {
-		this._onDidChangeTreeData.fire();
+	public refresh(resource?: any): any {
+		if (!resource || resource.scheme === 'freeioe') {
+			this._onDidChangeTreeData.fire();
+		} else {
+			this._onDidChangeTreeData.fire(resource);
+		}
 	}
 	public reload(device_node: DeviceNode): any {
 		this._onDidChange.fire(device_node.resource);
@@ -294,15 +279,7 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<DeviceNod
     }
     
 	public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
-		let node = this.model.parse_uri(uri);
-		if (!node.app) {
-			// return this.model.getDevice(node.device).then( dev => {
-			// 	return JSON.stringify(dev[0], null, 4);
-			// });
-			return this.model.getDeviceInfo(node.device).then( info => JSON.stringify(info, null, 4));
-		} else {
-			return this.model.getApplication(node.device, node.app).then( app => JSON.stringify(app, null, 4));
-		}
+		return this.model.getInfo(uri).then(obj => JSON.stringify(obj, null, 4));
     }
 }
 
@@ -312,21 +289,25 @@ export class IOTDeviceViewer {
 	private treeDataProvider: DeviceTreeDataProvider;
 	private iotViewer: vscode.TreeView<DeviceNode>;
 
-	constructor(context: vscode.ExtensionContext, device_client: client.Client) {
+	constructor(context: vscode.ExtensionContext, client_mgr: client.ClientMgr) {
 
-		this.treeModel = new DeviceTreeModel(device_client);
+		this.treeModel = new DeviceTreeModel(client_mgr);
 		this.treeDataProvider = new DeviceTreeDataProvider(context, this.treeModel);
 		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('freeioe', this.treeDataProvider));
 		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('freeioe_app', this.treeDataProvider));
 		this.iotViewer = vscode.window.createTreeView('IOTDeviceViewer', { treeDataProvider: this.treeDataProvider });
+		
+		client_mgr.DeviceStatusChanged( client => this.treeDataProvider.refresh(client.DeviceUri));
 
-		vscode.commands.registerCommand('IOTDeviceViewer.refresh', () => this.treeDataProvider.refresh());
+		vscode.commands.registerCommand('IOTDeviceViewer.refresh', (resource?: any) => this.treeDataProvider.refresh(resource));
 		vscode.commands.registerCommand('IOTDeviceViewer.openFile', resource => this.openResource(resource));
 		vscode.commands.registerCommand('IOTDeviceViewer.revealResource', () => this.reveal());
 		vscode.commands.registerCommand('IOTDeviceViewer.settings', () => this.settings());
 		
 		vscode.commands.registerCommand('IOTDeviceViewer.reload', (device_node) => this.treeDataProvider.reload(device_node));
 		vscode.commands.registerCommand('IOTDeviceViewer.connect', (device_node) => this.treeModel.connect(device_node));
+		vscode.commands.registerCommand('IOTDeviceViewer.disconnect', (device_node) => this.treeModel.disconnect(device_node));
+		vscode.commands.registerCommand('IOTDeviceViewer.setDefault', (device_node) => this.treeModel.setDefault(device_node));
 		vscode.commands.registerCommand('IOTDeviceViewer.applicationStart', (device_node) => this.treeModel.applicationStart(device_node));
 		vscode.commands.registerCommand('IOTDeviceViewer.applicationStop', (device_node) => this.treeModel.applicationStop(device_node));
 		vscode.commands.registerCommand('IOTDeviceViewer.applicationRestart', (device_node) => this.treeModel.applicationRestart(device_node));

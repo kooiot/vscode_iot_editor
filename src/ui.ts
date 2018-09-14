@@ -5,7 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { Client } from './client';
+import { ClientMgr } from './client_mgr';
 import { Application } from './freeioe_client';
 
 let ui: UI;
@@ -27,7 +27,7 @@ export class UI {
         this.ShowConfiguration = true;
     }
 
-    public bind(client: Client): void {
+    public bind(client: ClientMgr): void {
         client.ActiveConfigChanged(value => { this.ActiveConfig = value; });
     }
     public SetActiveConfig(config: string) {

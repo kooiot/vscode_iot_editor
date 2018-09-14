@@ -221,8 +221,8 @@ export class FreeIOEWS extends events.EventEmitter {
             let data = {
                 user: this.user,
                 passwd: this.password
-            };            
-            this.send_ws_message("login", data, (msg) => { c(msg); }, (err) => { e(err); });
+            };
+            this.send_ws_message("login", data, (msg) => {console.log("send_login....."); c(msg); }, (err) => { e(err); });
         });
     }
     public editor_post(form: { [key: string]: any } | string) : Thenable<WSMessage> {

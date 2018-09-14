@@ -67,7 +67,7 @@
             },
             {
                 "command": "iot_editor.connect",
-                "title": "Connect to device",
+                "title": "Connect to FreeIOE device",
                 "category": "IOT",
                 "icon": {
                     "light": "./media/light/connect.svg",
@@ -76,7 +76,7 @@
             },
             {
                 "command": "iot_editor.disconnect",
-                "title": "Disconnect to device",
+                "title": "Disconnect from FreeIOE device",
                 "category": "IOT",
                 "icon": {
                     "light": "./media/light/disconnect.svg",
@@ -151,54 +151,6 @@
                 }
             },
             {
-                "command": "IOTViewer.applicationStart",
-                "title": "Start application...",
-                "icon": {
-                    "light": "./media/light/play.svg",
-                    "dark": "./media/dark/play.svg"
-                }
-            },
-            {
-                "command": "IOTViewer.applicationStop",
-                "title": "Stop application...",
-                "icon": {
-                    "light": "./media/light/stop.svg",
-                    "dark": "./media/dark/stop.svg"
-                }
-            },
-            {
-                "command": "IOTViewer.applicationRestart",
-                "title": "Restart application...",
-                "icon": {
-                    "light": "./media/light/refresh.svg",
-                    "dark": "./media/dark/refresh.svg"
-                }
-            },
-            {
-                "command": "IOTViewer.refresh",
-                "title": "Refresh",
-                "icon": {
-                    "light": "./media/light/refresh.svg",
-                    "dark": "./media/dark/refresh.svg"
-                }
-            },
-            {
-                "command": "IOTViewer.reload",
-                "title": "Reload content",
-                "icon": {
-                    "light": "./media/light/refresh.svg",
-                    "dark": "./media/dark/refresh.svg"
-                }
-            },
-            {
-                "command": "IOTViewer.openFile",
-                "title": "Open IOT Application File"
-            },
-            {
-                "command": "IOTViewer.revealResource",
-                "title": "Reveal in FTP View"
-            },
-            {
                 "command": "IOTDeviceViewer.settings",
                 "title": "Edit Settings",
                 "icon": {
@@ -232,7 +184,7 @@
             },
             {
                 "command": "IOTDeviceViewer.connect",
-                "title": "Connect to device",
+                "title": "Connect",
                 "icon": {
                     "light": "./media/light/connect.svg",
                     "dark": "./media/dark/connect.svg"
@@ -240,10 +192,18 @@
             },
             {
                 "command": "IOTDeviceViewer.disconnect",
-                "title": "Disconnect from device",
+                "title": "Disconnect",
                 "icon": {
                     "light": "./media/light/disconnect.svg",
                     "dark": "./media/dark/disconnect.svg"
+                }
+            },
+            {
+                "command": "IOTDeviceViewer.setDefault",
+                "title": "Set as default device",
+                "icon": {
+                    "light": "./media/light/check.svg",
+                    "dark": "./media/dark/check.svg"
                 }
             },
             {
@@ -326,26 +286,9 @@
                 {
                     "when": "resourceScheme == 'ioe'",
                     "command": "IOTExplorer.applicationRestart"
-                },
-                {
-                    "when": "resourceScheme == 'iot'",
-                    "command": "IOTViewer.applicationStart"
-                },
-                {
-                    "when": "resourceScheme == 'iot'",
-                    "command": "IOTViewer.applicationStop"
-                },
-                {
-                    "when": "resourceScheme == 'iot'",
-                    "command": "IOTViewer.applicationRestart"
                 }
             ],
             "view/title": [
-                {
-                    "command": "IOTViewer.refresh",
-                    "when": "view == IOTViewer",
-                    "group": "navigation"
-                },
                 {
                     "command": "IOTDeviceViewer.settings",
                     "when": "view == IOTDeviceViewer",
@@ -391,19 +334,29 @@
             ],
             "view/item/context": [
                 {
-                    "command": "IOTDeviceViewer.connect",
-                    "when": "viewItem == 'FreeIOE.Device'",
-                    "group": "navigation"
-                },
-                {
-                    "command": "IOTDeviceViewer.reload",
-                    "when": "viewItem == 'FreeIOE.Device'",
-                    "group": "navigation"
-                },
-                {
                     "command": "IOTDeviceViewer.reload",
                     "when": "viewItem == 'FreeIOE.Application'",
                     "group": "navigation"
+                },
+                {
+                    "command": "IOTDeviceViewer.reload",
+                    "when": "viewItem == 'FreeIOE.Device'",
+                    "group": "navigation"
+                },
+                {
+                    "command": "IOTDeviceViewer.connect",
+                    "when": "viewItem == 'FreeIOE.Device'",
+                    "group": "6_freeioe"
+                },
+                {
+                    "command": "IOTDeviceViewer.disconnect",
+                    "when": "viewItem == 'FreeIOE.Device'",
+                    "group": "6_freeioe"
+                },
+                {
+                    "command": "IOTDeviceViewer.setDefault",
+                    "when": "viewItem == 'FreeIOE.Device'",
+                    "group": "z_freeioe"
                 },
                 {
                     "command": "IOTDeviceViewer.applicationStart",
@@ -456,21 +409,6 @@
                     "when": "editorLangId != 'Log' && resourceScheme == 'ioe'",
                     "command": "IOTExplorer.applicationStop",
                     "group": "2_iot_editor"
-                },
-                {
-                    "when": "editorLangId != 'Log' && resourceScheme == 'iot'",
-                    "command": "IOTViewer.applicationRestart",
-                    "group": "2_iot_editor"
-                },
-                {
-                    "when": "editorLangId != 'Log' && resourceScheme == 'iot'",
-                    "command": "IOTViewer.applicationStart",
-                    "group": "2_iot_editor"
-                },
-                {
-                    "when": "editorLangId != 'Log' && resourceScheme == 'iot'",
-                    "command": "IOTViewer.applicationStop",
-                    "group": "2_iot_editor"
                 }
             ]
         },
@@ -496,8 +434,8 @@
             ],
             "iot_explorer": [
                 {
-                    "id": "IOTViewer",
-                    "name": "FreeIOE Files Viewer"
+                    "id": "FreeIOE_News",
+                    "name": "FreeIOE News"
                 }
             ]
         }

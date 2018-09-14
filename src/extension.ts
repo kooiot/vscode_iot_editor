@@ -2,13 +2,13 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { Client } from './client';
+import { ClientMgr } from './client_mgr';
 import { IOTFileSystemProvider } from './iotExplorer';
 //import { IOTViewer } from './iotViewer';
 import { IOTDeviceViewer } from './deviceViewer';
 import { IOTEventViewer } from './eventViewer';
 
-let client: Client;
+let client: ClientMgr;
 let intervalTimer: NodeJS.Timer;
 //let iotExplorer: IOTExplorer;
 //let iotViewr: IOTViewer;
@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationEdit', configurationEdit));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationCreate', applicationCreate));
 
-    client = new Client(vscode.workspace.rootPath);
+    client = new ClientMgr(vscode.workspace.rootPath);
     //iotExplorer = new IOTExplorer(context, client);
     //iotViewr = new IOTViewer(context, client);
     iotDeviceViewer = new IOTDeviceViewer(context, client);
@@ -68,28 +68,27 @@ function onInterval(): void {
     iotEventViewer.onInterval();
 }
 
-function activeFsProvider (name: string, uri: string): void {
+function activeFsProvider (name: string, uri: vscode.Uri): void {
     onActivationEvent();
 
-    let base_uri = vscode.Uri.parse(`ioe://${uri}/`);
     if (!vscode.workspace.workspaceFolders) {
-        vscode.workspace.updateWorkspaceFolders(1, 0, { uri: base_uri, name: name });
+        vscode.workspace.updateWorkspaceFolders(1, 0, { uri: uri, name: name });
     } else {
         for (let wsf of vscode.workspace.workspaceFolders) {
-            if (wsf.uri.toString() === base_uri.toString()) {
+            if (wsf.uri.toString() === uri.toString()) {
                 // 
                 if (wsf.name === name) {
-                    //ioeFs.activeUri(base_uri);
+                    //ioeFs.activeUri(uri);
                     vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
                 } else {
-                    let result = vscode.workspace.updateWorkspaceFolders(wsf.index, 1, { uri: base_uri, name: name });
+                    let result = vscode.workspace.updateWorkspaceFolders(wsf.index, 1, { uri: uri, name: name });
                     console.log('updateWorkspaceFolders result', result);
                 }
                 return;
             }
         }
         let nu = vscode.workspace.workspaceFolders.length;
-        vscode.workspace.updateWorkspaceFolders(nu, 0, { uri: base_uri, name: name });
+        vscode.workspace.updateWorkspaceFolders(nu, 0, { uri: uri, name: name });
     }
 }
 

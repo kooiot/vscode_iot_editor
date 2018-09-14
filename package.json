@@ -51,17 +51,12 @@
         },
         "commands": [
             {
-                "command": "iot_editor.aboutEditor",
-                "title": "About IOT Editor...",
-                "category": "IOT"
-            },
-            {
                 "command": "iot_editor.workspaceInit",
                 "title": "Setup editor workspace",
                 "category": "IOT"
             },
             {
-                "command": "iot_editor.active_fs",
+                "command": "iot_editor.activeFS",
                 "title": "Active FileSystem provider",
                 "category": "IOT"
             },
@@ -268,9 +263,6 @@
                 {
                     "when": "workbenchState == workspace",
                     "command": "iot_editor.workspaceInit"
-                },
-                {
-                    "command": "iot_editor.aboutEditor"
                 },
                 {
                     "command": "iot_editor.connect"

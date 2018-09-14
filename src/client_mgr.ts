@@ -285,7 +285,7 @@ export class ClientMgr {
     }
 
     private activeFsExplorer(client: WSClient): void {
-        vscode.commands.executeCommand('iot_editor.active_fs', client.Config.name, client.FsUri);
+        vscode.commands.executeCommand('iot_editor.activeFS', client.Config.name, client.FsUri);
     }
 
     private ConfigEqual(l: configs.DeviceConfig, r: configs.DeviceConfig): boolean {

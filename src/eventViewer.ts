@@ -8,6 +8,7 @@ import { WSEvent } from './freeioe_ws';
 
 export interface EventNode {
 	resource: vscode.Uri;
+	enabled?: boolean;
 	label: string;
 	event?: WSEvent;
 }
@@ -25,6 +26,7 @@ export class IOTEventModel {
 			for (let dev of this.mgr.Devices) {
 				list.push({
 					resource: this.mgr.getDeviceUri(dev.name, 'freeioe_event'),
+					enabled: this.mgr.isConnect(dev.name),
 					label: dev.name,
 				});
 			}
@@ -100,10 +102,10 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<EventNode
 		return {
 			resourceUri: element.resource,
 			label: element.label,
-            collapsibleState: element.event? vscode.TreeItemCollapsibleState.None : vscode.TreeItemCollapsibleState.Collapsed,
+            collapsibleState: (element.event || !element.enabled) ? vscode.TreeItemCollapsibleState.None : vscode.TreeItemCollapsibleState.Collapsed,
             iconPath:this.getTreeItemIcon(element),
 			contextValue: 'FreeIOE.Event',
-			tooltip: "",
+			tooltip: element.event ? element.event.type : element.label,
 			command: {
 				command: 'IOTEventViewer.openFile',
 				arguments: [element.resource],

@@ -7,6 +7,7 @@ import { IOTFileSystemProvider } from './iotExplorer';
 //import { IOTViewer } from './iotViewer';
 import { IOTDeviceViewer } from './deviceViewer';
 import { IOTEventViewer } from './eventViewer';
+import { IOTNewsViewer } from './newsViewer.';
 
 let client: ClientMgr;
 let intervalTimer: NodeJS.Timer;
@@ -14,6 +15,7 @@ let intervalTimer: NodeJS.Timer;
 //let iotViewr: IOTViewer;
 let iotDeviceViewer: IOTDeviceViewer;
 let iotEventViewer: IOTEventViewer;
+let iotNewsViewer: IOTNewsViewer;
 let ioeFs: IOTFileSystemProvider;
 
 // this method is called when your extension is activated
@@ -28,6 +30,8 @@ export function activate(context: vscode.ExtensionContext) {
     }
     
     console.log('IOT Editor extension loaded!');
+    //vscode.workspace.getConfiguration("iot_editor").update("show_explorer_views", true);
+
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.connect', deviceConnect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.disconnect', deviceDisconnect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationSelect', configurationSelect));
@@ -36,10 +40,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationCreate', applicationCreate));
 
     client = new ClientMgr(vscode.workspace.rootPath);
-    //iotExplorer = new IOTExplorer(context, client);
-    //iotViewr = new IOTViewer(context, client);
     iotDeviceViewer = new IOTDeviceViewer(context, client);
     iotEventViewer = new IOTEventViewer(context, client);
+    iotNewsViewer = new IOTNewsViewer(context, client);
     
     /// For FileSystemProvider
     ioeFs = new IOTFileSystemProvider( context, client );
@@ -61,10 +64,9 @@ function onActivationEvent(): void {
 
 function onInterval(): void {
     client.onInterval();
-    //iotExplorer.onInterval();
-    //iotViewr.onInterval();
     iotDeviceViewer.onInterval();
     iotEventViewer.onInterval();
+    iotNewsViewer.onInterval();
 }
 
 function activeFsProvider (name: string, uri: vscode.Uri): void {

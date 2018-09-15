@@ -24,6 +24,7 @@
     "activationEvents": [
         "onFileSystem:ioe",
         "onCommand:iot_editor.workspaceInit",
+        "onView:IOTNewsViewer",
         "workspaceContains:.vscode/freeioe_devices.json"
     ],
     "main": "./out/extension",
@@ -46,6 +47,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Auto refresh connected device information (this cause fetch device information every 2.5 seconds)."
+                },
+                "iot_editor.show_explorer_views": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show device/event viewer in explorer."
                 }
             }
         },
@@ -256,6 +262,18 @@
             {
                 "command": "IOTEventViewer.revealResource",
                 "title": "Reveal in Device Event"
+            },
+            {
+                "command": "IOTNewsViewer.refresh",
+                "title": "Refresh",
+                "icon": {
+                    "light": "./media/light/refresh.svg",
+                    "dark": "./media/dark/refresh.svg"
+                }
+            },
+            {
+                "command": "IOTNewsViewer.openFile",
+                "title": "Open FreeIOE News"
             }
         ],
         "menus": {
@@ -294,6 +312,11 @@
                 {
                     "command": "IOTEventViewer.refresh",
                     "when": "view == IOTEventViewer",
+                    "group": "navigation"
+                },
+                {
+                    "command": "IOTNewsViewer.refresh",
+                    "when": "view == IOTNewsViewer",
                     "group": "navigation"
                 }
             ],
@@ -409,7 +432,8 @@
                 {
                     "id": "iot_explorer",
                     "title": "FreeIOE Explorer",
-                    "icon": "media/freeioe_explorer.svg"
+                    "icon": "media/freeioe_explorer.svg",
+                    "when": "config.iot_editor.show_explorer_views == true"
                 }
             ]
         },
@@ -417,16 +441,18 @@
             "explorer": [
                 {
                     "id": "IOTDeviceViewer",
-                    "name": "FreeIOE Devices"
+                    "name": "FreeIOE Devices",
+                    "when": "config.iot_editor.show_explorer_views == true"
                 },
                 {
                     "id": "IOTEventViewer",
-                    "name": "Events"
+                    "name": "Events",
+                    "when": "config.iot_editor.show_explorer_views == true"
                 }
             ],
             "iot_explorer": [
                 {
-                    "id": "FreeIOE_News",
+                    "id": "IOTNewsViewer",
                     "name": "FreeIOE News"
                 }
             ]

@@ -112,4 +112,8 @@ export class IOTNewsViewer {
 	public onInterval() {
 		//this.treeDataProvider.onInterval();
 	}
+	
+	public what_s_fuck() {
+		this.iotViewer.dispose();
+	}
 }

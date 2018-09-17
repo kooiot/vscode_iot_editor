@@ -77,3 +77,7 @@ Remove online configuration, which makes to much noice on workspace file.
 ### 1.3.1
 
 Allow multiple devcie connections.
+
+### 1.3.2
+
+Bug fix.

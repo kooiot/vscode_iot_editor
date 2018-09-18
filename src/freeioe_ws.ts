@@ -161,6 +161,7 @@ export class FreeIOEWS extends events.EventEmitter {
         }
         if (msg.code === 'info') {
             this.emit('info', msg.data.sn, msg.data.beta);
+            this.appendOutput("Send login request..."); 
             this.send_login().then(msg => {
                 this.emit('login', msg.data.result, msg.data.message);
             }, (reason) => {
@@ -222,7 +223,7 @@ export class FreeIOEWS extends events.EventEmitter {
                 user: this.user,
                 passwd: this.password
             };
-            this.send_ws_message("login", data, (msg) => {console.log("send_login....."); c(msg); }, (err) => { e(err); });
+            this.send_ws_message("login", data, (msg) => { c(msg); }, (err) => { e(err); });
         });
     }
     public editor_post(form: { [key: string]: any } | string) : Thenable<WSMessage> {

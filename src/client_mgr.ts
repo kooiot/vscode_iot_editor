@@ -270,7 +270,7 @@ export class ClientMgr {
         if (vscode.workspace.getConfiguration('iot_editor').get('debug') === true) {
             this.appendOutput(client, log);
         } else {
-            console.log(client.FsUri, log);
+            console.log(client.FsUri.toString(), log);
         }
     }
     private appendLog(client: WSClient, log: string) {

@@ -85,3 +85,8 @@ Bug fix.
 ### 1.3.3
 
 Show device information in output pannels.
+
+### 1.3.3
+
+Hide the file folder which is not belong to application.
+

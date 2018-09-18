@@ -26,13 +26,22 @@ export class FsModel {
 
 	public getChildren(node: IOTNode): Thenable<IOTNode[]> {
 		return this.mgr.getClient(node.resource).then(client => {
-			let uri = node.resource.scheme + "://" + node.resource.authority + "/" + node.app;
-			let nn = this.parse_uri(node.resource);
-			return client.dir_app(node.app, nn.path, false).then((list: freeioe_client.ApplicationFileNode[]) => {
-				return new Promise((c, e) => {
-					return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${uri}/${entry.id}`), app: node.app, isDirectory: entry.children !== false }))));
+			if (node.app && node.app.length > 0) {
+				let uri = node.resource.scheme + "://" + node.resource.authority + "/" + node.app;
+				let nn = this.parse_uri(node.resource);
+				return client.dir_app(node.app, nn.path, false).then((list: freeioe_client.ApplicationFileNode[]) => {
+					return new Promise((c, e) => {
+						return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${uri}/${entry.id}`), app: node.app, isDirectory: entry.children !== false }))));
+					});
 				});
-			});
+			} else {
+				let uri = node.resource.scheme + "://" + node.resource.authority + "/";
+				return client.list_apps().then( (list: freeioe_client.Application[]) => {
+					return new Promise((c, e) => {
+						return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${uri}/${entry.inst}`), app: entry.inst, isDirectory: true }))));
+					});
+				});
+			}
 		});
 	}
 

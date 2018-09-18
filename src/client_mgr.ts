@@ -359,7 +359,7 @@ export class ClientMgr {
                 this.updateDeviceSN(client, sn);
             } else {
                 setTimeout(async ()=>{
-                    this._disconnectDevice(client);6
+                    this._disconnectDevice(client);
                 }, 1000);
             }
         });

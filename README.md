@@ -81,3 +81,7 @@ Allow multiple devcie connections.
 ### 1.3.2
 
 Bug fix.
+
+### 1.3.3
+
+Show device information in output pannels.

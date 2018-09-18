@@ -34,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.connect', deviceConnect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.disconnect', deviceDisconnect));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationSelect', configurationSelect));
+    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.defaultDeviceSelect', defaultDeviceSelect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.workspaceInit', configurationEdit));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationEdit', configurationEdit));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationCreate', applicationCreate));
@@ -111,7 +111,7 @@ function deviceDisconnect(): void {
     }
 }
 
-function configurationSelect(): void {
+function defaultDeviceSelect(): void {
     onActivationEvent();
     if (!isFolderOpen()) {
         vscode.window.showInformationMessage('Open a folder first to select a configuration');

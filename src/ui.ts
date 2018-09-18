@@ -28,7 +28,7 @@ export class UI {
     }
 
     public bind(client: ClientMgr): void {
-        client.ActiveConfigChanged(value => { this.ActiveConfig = value; });
+        client.DefaultDeviceChanged(value => { this.ActiveConfig = value; });
     }
     public SetActiveConfig(config: string) {
         this.ActiveConfig = config;

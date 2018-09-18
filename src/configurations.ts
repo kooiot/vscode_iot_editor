@@ -58,7 +58,7 @@ export class EditorProperties {
     private configFileWatcherFallbackTime: Date = new Date(); // Used when file watching fails.
     private disposables: vscode.Disposable[] = [];
     private devicesChanged = new vscode.EventEmitter<DeviceConfig[]>();
-    private selectionChanged = new vscode.EventEmitter<number>();
+    private defaultDeviceChanged = new vscode.EventEmitter<number>();
 
     // Any time the `defaultSettings` are parsed and assigned to `this.configurationJson`,
     // we want to track when the default includes have been added to it.
@@ -74,7 +74,7 @@ export class EditorProperties {
             this.propertiesFile = vscode.Uri.file(configFilePath);
             setTimeout(async ()=>{
                 this.parsePropertiesFile();
-                this.onSelectionChanged();
+                this.onDefaultDeviceChanged();
             }, 100);
         }
 
@@ -95,14 +95,14 @@ export class EditorProperties {
             this.handleConfigurationChange();
         });
 
-        this.disposables.push(vscode.Disposable.from(this.devicesChanged, this.selectionChanged));
+        this.disposables.push(vscode.Disposable.from(this.devicesChanged, this.defaultDeviceChanged));
     }
 
     public get DevicesChanged(): vscode.Event<DeviceConfig[]> { return this.devicesChanged.event; }
-    public get SelectionChanged(): vscode.Event<number> { return this.selectionChanged.event; }
+    public get DefaultDeviceChanged(): vscode.Event<number> { return this.defaultDeviceChanged.event; }
     public get AuthCode() : string { return (this.configurationJson) ? this.configurationJson.auth_code : ""; }
     public get Devices(): DeviceConfig[] { return (this.configurationJson) ? this.configurationJson.devices : []; }
-    public get CurrentDevice(): number { return this.currentDeviceIndex; }
+    public get DefaultDevice(): number { return this.currentDeviceIndex; }
 
     public get DeviceNames(): string[] {
         let result: string[] = [];
@@ -117,9 +117,9 @@ export class EditorProperties {
         this.devicesChanged.fire(this.Devices);
     }
 
-    private onSelectionChanged(): void {
-        console.log('[EditorProperties] onSelectionChanged');
-        this.selectionChanged.fire(this.CurrentDevice);
+    private onDefaultDeviceChanged(): void {
+        console.log('[EditorProperties] onDefaultDeviceChanged');
+        this.defaultDeviceChanged.fire(this.DefaultDevice);
     }
 
     private resetToDefaultSettings(resetIndex: boolean): void {
@@ -127,8 +127,8 @@ export class EditorProperties {
         if (!this.configurationJson) {
             return;
         }
-        if (resetIndex || this.CurrentDevice < 0 ||
-            this.CurrentDevice >= this.configurationJson.devices.length) {
+        if (resetIndex || this.DefaultDevice < 0 ||
+            this.DefaultDevice >= this.configurationJson.devices.length) {
             this.currentDeviceIndex = 0;
         }
         this.configurationIncomplete = true;
@@ -143,7 +143,7 @@ export class EditorProperties {
         }
         else {
             this.currentDeviceIndex = index;
-            this.onSelectionChanged();
+            this.onDefaultDeviceChanged();
         }
     }
 
@@ -214,8 +214,8 @@ export class EditorProperties {
             // parsePropertiesFile can fail, but it won't overwrite an existing configurationJson in the event of failure.
             // this.configurationJson should only be undefined here if we have never successfully parsed the propertiesFile.
             if (this.configurationJson) {
-                if (this.CurrentDevice < 0 ||
-                    this.CurrentDevice >= this.configurationJson.devices.length) {
+                if (this.DefaultDevice < 0 ||
+                    this.DefaultDevice >= this.configurationJson.devices.length) {
                     // If the index is out of bounds (during initialization or due to removal of configs), fix it.
                     this.currentDeviceIndex = 0;
                 }
@@ -251,16 +251,16 @@ export class EditorProperties {
             }
 
             if (!this.configurationIncomplete && this.configurationJson && this.configurationJson.devices &&
-                this.CurrentDevice < this.configurationJson.devices.length && this.CurrentDevice !== -1) {
+                this.DefaultDevice < this.configurationJson.devices.length && this.DefaultDevice !== -1) {
                 for (let i: number = 0; i < newJson.devices.length; i++) {
-                    if (newJson.devices[i].name === this.configurationJson.devices[this.CurrentDevice].name) {
+                    if (newJson.devices[i].name === this.configurationJson.devices[this.DefaultDevice].name) {
                         this.currentDeviceIndex = i;
                         break;
                     }
                 }
             }
             this.configurationJson = newJson;
-            if (this.CurrentDevice >= newJson.devices.length) {
+            if (this.DefaultDevice >= newJson.devices.length) {
                 this.currentDeviceIndex = 0;
             }
 

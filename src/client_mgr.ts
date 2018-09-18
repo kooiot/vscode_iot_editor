@@ -18,7 +18,7 @@ interface FolderSettingsParams {
 }
 
 interface ClientModel {
-    activeConfigName: DataBinding<string>;
+    defaultDeviceName: DataBinding<string>;
 }
 
 export class ClientMgr {
@@ -34,10 +34,10 @@ export class ClientMgr {
 
     // The "model" that is displayed via the UI (status bar).
     private model: ClientModel = {
-        activeConfigName: new DataBinding<string>("")
+        defaultDeviceName: new DataBinding<string>("")
     };
 
-    public get ActiveConfigChanged(): vscode.Event<string> { return this.model.activeConfigName.ValueChanged; }
+    public get DefaultDeviceChanged(): vscode.Event<string> { return this.model.defaultDeviceName.ValueChanged; }
     public get DevicesChanged(): vscode.Event<configs.DeviceConfig[]> { return this.configuration.DevicesChanged; }
 
     private _deviceStatus: vscode.EventEmitter<WSClient> = new vscode.EventEmitter<WSClient>();
@@ -191,14 +191,14 @@ export class ClientMgr {
         ui.bind(this);
         
         try {
-            let conf = vscode.workspace.getConfiguration('iot_editor').get<number>('config');
+            let conf = vscode.workspace.getConfiguration('iot_editor').get<number>('default');
             if (conf === undefined) { conf = -1;}
 
             this.setupOutputHandlers();
             
             this.configuration = new configs.EditorProperties(this.RootPath, conf);
             this.configuration.DevicesChanged((e) => this.onDevicesChanged(e));
-            this.configuration.SelectionChanged((e) => this.onSelectedDeviceChanged(e));
+            this.configuration.DefaultDeviceChanged((e) => this.onDefaultDeviceChanged(e));
             this.disposables.push(this.configuration);
             
             this.registerFileWatcher();
@@ -261,26 +261,26 @@ export class ClientMgr {
         }
     }
     
-    public appendOutput(log: string) {
+    public appendOutput(client: WSClient, log: string) {
         if (this.outputChannel) {
-            this.outputChannel.appendLine(log);
+            this.outputChannel.appendLine(`${client.Config.name} [${client.Config.host}:${client.Config.port}]: ${log}`);
         }
     }
-    private appendConsole(log: string) {
+    private appendConsole(client: WSClient, log: string) {
         if (vscode.workspace.getConfiguration('iot_editor').get('debug') === true) {
-            this.appendOutput(log);
+            this.appendOutput(client, log);
         } else {
-            console.log(log);
+            console.log(client.FsUri, log);
         }
     }
-    private appendLog(log: string) {
+    private appendLog(client: WSClient, log: string) {
         if (this.logChannel) {
-            this.logChannel.appendLine(log);
+            this.logChannel.appendLine(`${client.Config.name} [${client.Config.host}:${client.Config.port}]: ${log}`);
         }
     }
-    private appendCom(log: string) {
+    private appendCom(client: WSClient, log: string) {
         if (this.commChannel) {
-            this.commChannel.appendLine(log);
+            this.commChannel.appendLine(`${client.Config.name} [${client.Config.host}:${client.Config.port}]: ${log}`);
         }
     }
 
@@ -309,35 +309,33 @@ export class ClientMgr {
                 }
                 this.disconnectDevice(index);
             }
-            this.appendOutput(`Start to connect device: ${conf.host}:${conf.port}`);
 
             let ws_client = new WSClient(conf, this.configuration.AuthCode);
+            this.appendOutput(ws_client, `Start to connect device: ${conf.host}:${conf.port}`);
             this._clients.set(index, ws_client);
             ws_client.on("device_sn_diff", (remote_sn : string) => this.on_device_sn_diff(ws_client, remote_sn));
-            ws_client.on("console", (content: string) => this.appendConsole(content));
-            ws_client.on("log", (content: string) => this.appendLog(content));
-            ws_client.on("comm", (content: string) => this.appendCom(content));
+            ws_client.on("console", (content: string) => this.appendConsole(ws_client, content));
+            ws_client.on("log", (content: string) => this.appendLog(ws_client, content));
+            ws_client.on("comm", (content: string) => this.appendCom(ws_client, content));
             ws_client.on("message", (code: string, data: any) => this.on_ws_message(ws_client, code, data));
             ws_client.on("device_info", (sn: string, beta: boolean) => this.on_device_info(ws_client, sn, beta));
             ws_client.on("ready", () => {
-                this.appendOutput(`Device ${ws_client.Config.host}:${ws_client.Config.port} connnected!`);
                 vscode.window.showInformationMessage(`Device ${ws_client.Config.host}:${ws_client.Config.port} connnected!`);
                 this.activeFsExplorer(ws_client);
                 this._deviceStatus.fire(ws_client);
             });
             ws_client.on("error", (message: string) => {
-                this.appendOutput(`Device connnect failed! ${message}`);
-                vscode.window.showInformationMessage(`Device connnect failed! ${message}`);
+                vscode.window.showErrorMessage(`Device connnect failed! ${message}`);
                 this._deviceStatus.fire(ws_client);
             });
             ws_client.on("disconnect", (code: number, reason: string) => {
-                this.appendOutput(`Device ${ws_client.Config.host}:${ws_client.Config.port} disconnected! code:${code} reason:${reason}`);
                 vscode.window.showInformationMessage(`Device ${ws_client.Config.host}:${ws_client.Config.port} disconnected! code:${code} reason:${reason}`);
                 this._deviceStatus.fire(ws_client);
             });
             ws_client.on("app_event", (event: WSAppEvent) => { this.refresh_device_view(ws_client); });
             ws_client.on("event", (event: WSEvent) => { this.refresh_event_view(ws_client); });
             ws_client.connect();
+            this._deviceStatus.fire(ws_client);
             return Promise.resolve(ws_client);
         }
         return Promise.reject(`Device not found!`);
@@ -361,7 +359,7 @@ export class ClientMgr {
                 this.updateDeviceSN(client, sn);
             } else {
                 setTimeout(async ()=>{
-                    this._disconnectDevice(client);
+                    this._disconnectDevice(client);6
                 }, 1000);
             }
         });
@@ -378,48 +376,51 @@ export class ClientMgr {
     }
     
     private on_ws_message( client: WSClient, code: string, data: any) {
-        this.appendOutput(`WebSocket message: ${code} ${data}`);
+        this.appendOutput(client, `WebSocket message: ${code} ${data}`);
     }
 
     private _disconnectDevice( client: WSClient) : Thenable<void> {
-        this.appendOutput(`Disconnect from device: ${client.Config.host}:${client.Config.port}`);
+        this.appendOutput(client, `Disconnect from device: ${client.Config.host}:${client.Config.port}`);
         client.disconnect();
         return Promise.resolve();
     }
     private disconnectDevice( index: number ) : Thenable<void> {
         let client = this._clients.get(index);
         if (client !== undefined) {
-            return this._disconnectDevice(client);
+            return this._disconnectDevice(client).then( () => {
+                this._deviceStatus.fire(client);
+                this._clients.delete(index);
+                return Promise.resolve();
+            });
         }
         return Promise.reject(`Device not connected!`);
     }
     
     private onDevicesChanged(devices: configs.DeviceConfig[]): void {
         console.log('[Client] onDevicesChanged');
-        if (this.configuration.CurrentDevice === -1 || this.configuration.CurrentDevice >= devices.length) {
+        if (this.configuration.DefaultDevice === -1 || this.configuration.DefaultDevice >= devices.length) {
             return;
         }
         let params: FolderSettingsParams = {
             devices: devices,
-            currentDevice: this.configuration.CurrentDevice
+            currentDevice: this.configuration.DefaultDevice
         };
 
-        this.model.activeConfigName.Value = devices[params.currentDevice].name;
-        this.connectDevice(params.currentDevice);
+        this.model.defaultDeviceName.Value = devices[params.currentDevice].name;
         this.refresh_views();
+        this.connectDevice(params.currentDevice);
     }
 
-    private onSelectedDeviceChanged(index: number): void {
-        console.log('[Client] onSelectedDeviceChanged');
+    private onDefaultDeviceChanged(index: number): void {
+        console.log('[Client] onDefaultDeviceChanged');
         if (index === -1) {
             return;
         }
 
-        this.model.activeConfigName.Value = this.configuration.DeviceNames[index];
-        vscode.workspace.getConfiguration('iot_editor').update('config', index);
+        this.model.defaultDeviceName.Value = this.configuration.DeviceNames[index];
+        vscode.workspace.getConfiguration('iot_editor').update('default', index);
         
         this.connectDevice(index);
-        this.refresh_views();
     }
 
     /*********************************************

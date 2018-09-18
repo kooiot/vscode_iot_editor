@@ -470,9 +470,9 @@ export class ClientMgr {
     }
 
     public startApplication(resource: vscode.Uri, inst: string): Thenable<void> {
-        console.log('Start Application', resource, resource);
+        console.log('Start Application', resource.toString(), resource);
         return this.getClient(resource).then( (client) => {
-            return client.start_app(inst).then( (result: boolean) => {
+            return client.start_app(inst).then( () => {
                 vscode.window.showInformationMessage(`Application ${client.Name}.${inst} started!`);
                 Promise.resolve();
             }, (reason) => {
@@ -482,9 +482,9 @@ export class ClientMgr {
         });
     }
     public stopApplication(resource: vscode.Uri, inst: string, reason: string): Thenable<void> {
-        console.log('Stop Application', resource, inst);
+        console.log('Stop Application', resource.toString(), inst);
         return this.getClient(resource).then( (client) => {
-            client.stop_app(inst, reason).then( (result: boolean) => {
+            client.stop_app(inst, reason).then( () => {
                 vscode.window.showInformationMessage(`Application ${client.Name}.${inst} stoped!`);
                 Promise.resolve();
             }, (reason) => {
@@ -494,19 +494,19 @@ export class ClientMgr {
         });
     }
     public restartApplication(resource: vscode.Uri, inst: string, reason: string): Thenable<void> {
-        console.log('Restart Application', resource, inst);
+        console.log('Restart Application', resource.toString(), inst);
         return this.getClient(resource).then( (client) => {
-            return client.restart_app(inst, reason).then( (result: boolean) => {
-                vscode.window.showInformationMessage(`Application ${inst} started!`);
+            return client.restart_app(inst, reason).then( () => {
+                vscode.window.showInformationMessage(`Application ${client.Name}.${inst} restarted!`);
                 Promise.resolve();
             }, (reason) => {
-                vscode.window.showInformationMessage(`Application start failed! ${reason}`);
+                vscode.window.showInformationMessage(`Application ${client.Name}.${inst} restart failed! ${reason}`);
                 Promise.reject(reason);
             });
         });
     }
     public configApplication(resource: vscode.Uri, inst: string): Thenable<void> {
-        console.log('Config Application', resource, inst);
+        console.log('Config Application', resource.toString(), inst);
         return this.getClient(resource).then( (client) => {
             // TODO:
         });

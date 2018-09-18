@@ -192,21 +192,19 @@ export class WSClient extends events.EventEmitter {
         });
     }
 
-    public restart_app(inst: string, reason: string): Thenable<boolean> {
+    public restart_app(inst: string, reason: string): Thenable<void> {
         this.appendOutput(`Restart Application ${inst}`);   
-        return this.stop_app(inst, reason).then((result) => {
-            return new Promise((c, e) => {
-                return result ? this.start_app(inst) : false;
+        return this.stop_app(inst, reason).then(() => {
+                return this.start_app(inst);
             });
-        });
     }
-    public start_app(inst: string): Thenable<boolean> {
+    public start_app(inst: string): Thenable<void> {
         this.appendOutput(`Start Application ${inst}`);
         return this.ws_con.app_start(inst).then((msg) => {
             return new Promise((c, e) => {
                 let data = msg.data;
                 if (data.result === true) {
-                    return c(data.result);
+                    return c();
                 } else {
                     this.appendOutput(`Start Application error ${data.message}`);
                     return e('Error while start application: ' + data.message);
@@ -214,13 +212,13 @@ export class WSClient extends events.EventEmitter {
             });
         });
     }
-    public stop_app(inst: string, reason: string): Thenable<boolean> {
+    public stop_app(inst: string, reason: string): Thenable<void> {
         this.appendOutput(`Stop Application ${inst}`); 
         return this.ws_con.app_stop(inst, reason).then((msg) => {
             return new Promise((c, e) => {
                 let data = msg.data;
                 if (data.result === true) {
-                    return c(data.result);
+                    return c();
                 } else {
                     this.appendOutput(`Stop Application error ${data.message}`);
                     return e('Error while stop application: ' + data.message);

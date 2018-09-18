@@ -173,17 +173,11 @@ export class FreeIOEWS extends events.EventEmitter {
             this.appendLog(`[${tm}] [${msg.data.level}] [${msg.data.process}] ${msg.data.content} `);
         } 
         else if (msg.code === 'event') {
-            let tm = this.formatDateTime(<number>msg.data.timestamp * 1000);
             let data: WSEvent = Object.assign({}, msg.data);
-            let data_data = JSON.stringify(data.data);
-            this.appendLog(`[${tm}] [${data.type}] [${data.app}] [${data.level}] ${data.info} ${data_data}`);
             this.emit("event", data);
         } 
         else if (msg.code === 'app_event') {
-            let tm = this.formatDateTime(<number>msg.data.timestamp * 1000);
             let data: WSAppEvent = Object.assign({}, msg.data);
-            let data_data = JSON.stringify(data.data);
-            this.appendLog(`[${tm}] [${data.app}] [${data.event}]  ${data_data}`);
             this.emit("app_event", data);
         } 
         else if (msg.code === 'comm') {

@@ -81,6 +81,7 @@ export class WSClient extends events.EventEmitter {
     }
     private on_ws_event( event: WSEvent) {
         this.event_buf.push(event);
+        this.emit("event", event);
     }
     private on_ws_app_event( event: WSAppEvent) {
         this.emit("app_event", event);

@@ -32,40 +32,6 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 Users appreciate release notes as you update your extension.
 
-### 0.1.0
-
-Initial release of vscode extension for FreeeIOE
-
-### 0.2.0
-
-Using websocket instead of http restful api
-
-### 0.2.1
-
-Fixed interval reconnection issue.
-
-### 0.2.2
-
-Fixed log confusion about connection.
-
-### 0.2.3
-
-Update extension description and icon image.
-
-### 1.0.0
-
-Using extented view instead of downloading file to local disk.
-Implement device view, application file explorer.
-
-### 1.1.0
-
-Added event viewer.
-Shows the information as json file.
-
-### 1.1.1
-
-Support New/Rename/Delete File/Folder.
-
 ### 1.2.0
 
 Using FileSystemProvider instread of customized viewer.
@@ -86,7 +52,10 @@ Bug fix.
 
 Show device information in output pannels.
 
-### 1.3.3
+### 1.3.4
 
 Hide the file folder which is not belong to application.
 
+### 1.3.5
+
+Bug fix.

@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "Developing application with connected FreeIOE device",
-    "version": "1.3.4",
+    "version": "1.3.5",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",

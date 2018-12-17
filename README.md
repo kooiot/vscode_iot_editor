@@ -59,3 +59,7 @@ Hide the file folder which is not belong to application.
 ### 1.3.5
 
 Bug fix.
+
+### 1.3.6
+
+Fixed initial workspace failure.

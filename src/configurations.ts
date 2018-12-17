@@ -18,7 +18,7 @@ let defaultSettings: string = `{
             "desc": "Device authed by private auth code",
             "host": "192.168.0.245",
             "port": 8818,
-            "sn": "",
+            "sn": ""
         },
         {
             "name": "Device2",

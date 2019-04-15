@@ -2,7 +2,7 @@
     "name": "iot-editor",
     "displayName": "IOT Editor",
     "description": "Developing application with connected FreeIOE device",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "publisher": "kooiot",
     "author": {
         "name": "Dirk Chang",
@@ -144,6 +144,14 @@
                 }
             },
             {
+                "command": "IOTExplorer.applicationDownload",
+                "title": "Download application package...",
+                "icon": {
+                    "light": "./media/light/download.svg",
+                    "dark": "./media/dark/download.svg"
+                }
+            },
+            {
                 "command": "IOTExplorer.reload",
                 "title": "Reload content",
                 "icon": {
@@ -240,6 +248,14 @@
                 }
             },
             {
+                "command": "IOTDeviceViewer.applicationDownload",
+                "title": "Download application package...",
+                "icon": {
+                    "light": "./media/light/download.svg",
+                    "dark": "./media/dark/download.svg"
+                }
+            },
+            {
                 "command": "IOTEventViewer.refresh",
                 "title": "Refresh",
                 "icon": {
@@ -296,6 +312,10 @@
                 {
                     "when": "resourceScheme == 'ioe'",
                     "command": "IOTExplorer.applicationRestart"
+                },
+                {
+                    "when": "resourceScheme == 'ioe'",
+                    "command": "IOTExplorer.applicationDownload"
                 }
             ],
             "view/title": [
@@ -340,6 +360,11 @@
                     "command": "IOTExplorer.applicationRestart",
                     "when": "resourceScheme == 'ioe'",
                     "group": "1_application"
+                },
+                {
+                    "command": "IOTExplorer.applicationDownload",
+                    "when": "resourceScheme == 'ioe'",
+                    "group": "z_application"
                 },
                 {
                     "command": "IOTExplorer.applicationConfig",
@@ -390,6 +415,11 @@
                 },
                 {
                     "command": "IOTDeviceViewer.applicationConfig",
+                    "when": "viewItem == 'FreeIOE.Application'",
+                    "group": "9_application"
+                },
+                {
+                    "command": "IOTDeviceViewer.applicationDownload",
                     "when": "viewItem == 'FreeIOE.Application'",
                     "group": "9_application"
                 },

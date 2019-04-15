@@ -226,6 +226,20 @@ export class WSClient extends events.EventEmitter {
             });
         });
     }
+    public download_app(inst: string, version: string | undefined): Thenable<string> {
+        this.appendOutput(`Stop Application ${inst}`); 
+        return this.ws_con.app_download(inst, version).then((msg) => {
+            return new Promise((c, e) => {
+                let data = msg.data;
+                if (data.result === true) {
+                    return c(data.content);
+                } else {
+                    this.appendOutput(`Download Application error ${data.message}`);
+                    return e('Error while download application: ' + data.message);
+                }
+            });
+        });
+    }
 
     public list_apps(): Thenable<Application[]> {
         this.appendOutput(`Get Application List`);

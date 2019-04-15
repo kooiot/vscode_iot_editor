@@ -2,6 +2,7 @@
 
 import * as vscode from 'vscode';
 import { basename, dirname } from 'path';
+import * as fs from "fs";
 import * as freeioe_client  from './freeioe_client';
 import * as client from './client_mgr';
 
@@ -164,6 +165,19 @@ export class FsModel {
 		let node = this.parse_uri(uri);
 		return this.mgr.configApplication(uri, node.app);
 	}
+	
+	public applicationDownload(item: IOTNode | vscode.Uri) : Thenable<void> {
+		let uri = (item instanceof vscode.Uri) ? item : item.resource;
+		let node = this.parse_uri(uri);
+		return this.mgr.downloadApplication(uri, node.app, undefined).then( (content) => {
+			vscode.window.showSaveDialog({saveLabel: 'Application Package File Save To..', filters : {
+				'FreeIOE Application Package': ['zip', 'ZIP']}}).then( (file_uri) => {
+					if (file_uri) {
+						fs.writeFileSync(file_uri.fsPath, new Buffer(content, 'base64'));
+					}
+				});
+		});
+	}
 }
 
 export class IOTFileSystemProvider implements vscode.FileSystemProvider {
@@ -179,6 +193,7 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 		vscode.commands.registerCommand('IOTExplorer.applicationStop', (resource: vscode.Uri) => this.model.applicationStop(resource));
 		vscode.commands.registerCommand('IOTExplorer.applicationRestart', (resource: vscode.Uri) => this.model.applicationRestart(resource));
 		vscode.commands.registerCommand('IOTExplorer.applicationConfig', (resource: vscode.Uri) => this.model.applicationConfig(resource));
+		vscode.commands.registerCommand('IOTExplorer.applicationDownload', (resource: vscode.Uri) => this.model.applicationDownload(resource));
 	}
 
 	// helper functions

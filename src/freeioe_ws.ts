@@ -275,6 +275,21 @@ export class FreeIOEWS extends events.EventEmitter {
         });
     }
 
+    public app_download(inst: string, version:string | undefined) : Thenable<WSMessage> {
+		return new Promise((c, e) => {
+            let data = {
+                inst: inst,
+            };
+            if (version !== undefined) {
+                data = Object.assign({
+                    inst: inst,
+                    version: version
+                });
+            }
+            this.send_ws_message("app_download", data, (msg) => { c(msg); }, (err) => { e(err); });
+        });
+    }
+
     public app_list() : Thenable<WSMessage> {
 		return new Promise((c, e) => {
             this.send_ws_message("app_list", {}, (msg) => { c(msg); }, (err) => { e(err); });

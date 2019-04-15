@@ -2,6 +2,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from "fs";
 import * as client from './client_mgr';
 import * as configs from './configurations';
 import * as freeioe_client from './freeioe_client';
@@ -178,6 +179,23 @@ export class DeviceTreeModel {
 			return this.mgr.configApplication(node.resource, app);
 		});
 	}
+	
+	public applicationDownload(node: DeviceNode) : Thenable<void> {
+		return this.mgr.getClient(node.resource).then(() => {
+			let app = this.get_app(node.resource);
+			if (!app) {
+				return Promise.reject(`Node is not inside an application ${node.resource}`);
+			}
+			return this.mgr.downloadApplication(node.resource, app, undefined).then( (content) => {
+				vscode.window.showSaveDialog({saveLabel: 'Application Package File Save To..', filters : {
+					'FreeIOE Application Package': ['zip', 'ZIP']}}).then( (file_uri) => {
+						if (file_uri) {
+							fs.writeFileSync(file_uri.fsPath, new Buffer(content, 'base64'));
+						}
+					});
+			});
+		});
+	}
 }
 
 
@@ -312,6 +330,7 @@ export class IOTDeviceViewer {
 		vscode.commands.registerCommand('IOTDeviceViewer.applicationStop', (device_node) => this.treeModel.applicationStop(device_node));
 		vscode.commands.registerCommand('IOTDeviceViewer.applicationRestart', (device_node) => this.treeModel.applicationRestart(device_node));
 		vscode.commands.registerCommand('IOTDeviceViewer.applicationConfig', (device_node) => this.treeModel.applicationConfig(device_node));
+		vscode.commands.registerCommand('IOTDeviceViewer.applicationDownload', (device_node) => this.treeModel.applicationDownload(device_node));
 	}
 
 	private openResource(resource: vscode.Uri): void {

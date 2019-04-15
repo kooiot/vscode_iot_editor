@@ -32,38 +32,42 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 Users appreciate release notes as you update your extension.
 
-### 1.2.0
+### 1.4.1
 
-Using FileSystemProvider instread of customized viewer.
+Fixed folder creation failure.
 
-### 1.3.0
+### 1.4.0
 
-Remove online configuration, which makes to much noice on workspace file.
-
-### 1.3.1
-
-Allow multiple devcie connections.
-
-### 1.3.2
-
-Bug fix.
-
-### 1.3.3
-
-Show device information in output pannels.
-
-### 1.3.4
-
-Hide the file folder which is not belong to application.
-
-### 1.3.5
-
-Bug fix.
+Support download application (as one zip file).
 
 ### 1.3.6
 
 Fixed initial workspace failure.
 
-### 1.4.0
+### 1.3.5
 
-Fixed folder creation failure.
+Bug fix.
+
+### 1.3.4
+
+Hide the file folder which is not belong to application.
+
+### 1.3.3
+
+Show device information in output pannels.
+
+### 1.3.2
+
+Bug fix.
+
+### 1.3.1
+
+Allow multiple devcie connections.
+
+### 1.3.0
+
+Remove online configuration, which makes to much noice on workspace file.
+
+### 1.2.0
+
+Using FileSystemProvider instread of customized viewer.

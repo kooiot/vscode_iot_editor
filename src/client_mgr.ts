@@ -507,6 +507,18 @@ export class ClientMgr {
             });
         });
     }
+    public downloadApplication(resource: vscode.Uri, inst: string, version: string | undefined): Thenable<string> {
+        console.log('Download Application', resource.toString(), inst);
+        return this.getClient(resource).then( (client) => {
+            return client.download_app(inst, version).then( (content) => {
+                vscode.window.showInformationMessage(`Application ${client.Name}.${inst} downloaded!`);
+                return content;
+            }, (reason) => {
+                vscode.window.showInformationMessage(`Application ${client.Name}.${inst} download failed! ${reason}`);
+                Promise.reject(reason);
+            });
+        });
+    }
     public configApplication(resource: vscode.Uri, inst: string): Thenable<void> {
         console.log('Config Application', resource.toString(), inst);
         return this.getClient(resource).then( (client) => {

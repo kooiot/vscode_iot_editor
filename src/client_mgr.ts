@@ -419,6 +419,8 @@ export class ClientMgr {
 
         this.model.defaultDeviceName.Value = this.configuration.DeviceNames[index];
         vscode.workspace.getConfiguration('iot_editor').update('default', index);
+
+        console.log('[Client] onDefaultDeviceChanged connect to device');
         
         this.connectDevice(index);
     }

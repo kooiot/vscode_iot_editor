@@ -223,6 +223,8 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 				fs.mtime = stat.modification;
 				return c(fs);
 			});
+		}, (reason) => {
+			throw vscode.FileSystemError.FileNotFound();
 		});
 	}
 
@@ -242,6 +244,8 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 				}
 				return c(result);
 			});
+		}, (reason) => {
+			throw vscode.FileSystemError.FileNotFound();
 		});
 	}
 
@@ -251,7 +255,9 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 		if (!this.model.is_connect(uri)) {
 			throw vscode.FileSystemError.FileNotFound();
 		}
-		return this.model.getContent(uri).then( (content: string) => new Buffer(content));
+		return this.model.getContent(uri).then( (content: string) => new Buffer(content), (reason) => {
+			throw vscode.FileSystemError.FileNotFound();
+		});
     }
 
     writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean, overwrite: boolean }): void {
@@ -267,11 +273,11 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 					//this._fireSoon({ type: vscode.FileSystemError, uri});
 				}
 			}, (reason) => {
-				// TODO:
-		
+				throw vscode.FileSystemError.Unavailable();
 			});
 		}, (reason) => {
 			vscode.window.showWarningMessage(`Device is not in beta mode! ${reason}`);
+			throw vscode.FileSystemError.NoPermissions();
 		});
     }
 
@@ -289,9 +295,12 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 						{ type: vscode.FileChangeType.Created, uri: newUri }
 					);
 				}
+			}, (reason) => {
+				throw vscode.FileSystemError.Unavailable();
 			});
 		}, (reason) => {
 			vscode.window.showWarningMessage(`Device is not in beta mode! ${reason}`);
+			throw vscode.FileSystemError.NoPermissions();
 		});
     }
 
@@ -305,9 +314,12 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 				if (result) {
 					this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { uri, type: vscode.FileChangeType.Deleted });
 				}
+			}, (reason) => {
+				throw vscode.FileSystemError.Unavailable();
 			});
 		}, (reason) => {
 			vscode.window.showWarningMessage(`Device is not in beta mode! ${reason}`);
+			throw vscode.FileSystemError.NoPermissions();
 		});
     }
 
@@ -321,9 +333,12 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 				if (result) {
 					this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { type: vscode.FileChangeType.Created, uri });
 				}
+			}, (reason) => {
+				throw vscode.FileSystemError.Unavailable();
 			});
 		}, (reason) => {
 			vscode.window.showWarningMessage(`Device is not in beta mode! ${reason}`);
+			throw vscode.FileSystemError.NoPermissions();
 		});
     }
 
@@ -340,6 +355,7 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 			});
 		}, (reason) => {
 			vscode.window.showWarningMessage(`Device is not in beta mode! ${reason}`);
+			throw vscode.FileSystemError.NoPermissions();
 		});
     }
 

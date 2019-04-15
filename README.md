@@ -63,3 +63,7 @@ Bug fix.
 ### 1.3.6
 
 Fixed initial workspace failure.
+
+### 1.4.0
+
+Fixed folder creation failure.

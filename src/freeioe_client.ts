@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import {basename, dirname} from 'path';
 import { WSMessage, FreeIOEWS, WSAppEvent, WSEvent } from './freeioe_ws';
 import { DeviceConfig }  from './configurations';
+import {sleep} from './util';
 
 
 export interface Application {
@@ -195,6 +196,7 @@ export class WSClient extends events.EventEmitter {
     public restart_app(inst: string, reason: string): Thenable<void> {
         this.appendOutput(`Restart Application ${inst}`);   
         return this.stop_app(inst, reason).then(() => {
+                sleep(3000);
                 return this.start_app(inst);
             });
     }

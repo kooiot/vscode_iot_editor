@@ -32,6 +32,10 @@ Calling out known issues can help limit users opening duplicate issues against y
 
 Users appreciate release notes as you update your extension.
 
+### 1.4.2
+
+Restart application too quick to start application which actually is closing..
+
 ### 1.4.1
 
 Fixed folder creation failure.

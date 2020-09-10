@@ -47,7 +47,7 @@ export class NewsDataProvider implements vscode.TreeDataProvider<NewNode>, vscod
 
 	public refresh(resource: any): any {
 		if (!resource || resource.path === '/') {
-			this._onDidChangeTreeData.fire();
+			this._onDidChangeTreeData.fire(null);
 		} else {
 			this._onDidChangeTreeData.fire(resource);
 		}

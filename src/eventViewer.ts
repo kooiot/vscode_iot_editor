@@ -22,8 +22,8 @@ export class IOTEventModel {
 
 	public get roots() : Thenable<EventNode[]> {
 		return new Promise((c, e) => {
-			let list: EventNode[] = [];
-			for (let dev of this.mgr.Devices) {
+			const list: EventNode[] = [];
+			for (const dev of this.mgr.Devices) {
 				list.push({
 					resource: this.mgr.getDeviceUri(dev.name, 'freeioe_event'),
 					enabled: this.mgr.isConnect(dev.name),
@@ -33,12 +33,12 @@ export class IOTEventModel {
 			return c(list);
 		});
 	}
-	
+
 	public getChildren(node: EventNode): EventNode[] |  Thenable<EventNode[]> {
 		return this.mgr.getClient(node.resource).then(client => {
 			return client.list_events().then((list) => {
 				return new Promise((c, e) => {
-					let result: EventNode[] = [];
+					const result: EventNode[] = [];
 					for (let i = 0; i < list.length; i++) {
 						result.push({
 							resource: vscode.Uri.parse(`${node.resource}${i}.json`),
@@ -56,7 +56,7 @@ export class IOTEventModel {
 		});
 	}
 	private remove_ext(filename : string) {
-		let ext = path.extname(filename);
+		const ext = path.extname(filename);
 		return filename.substr(0, filename.length - ext.length);
 	}
 
@@ -64,7 +64,7 @@ export class IOTEventModel {
 		let uri_path = resource.path.substr(1);
 		if (uri_path.length > 0) {
 			uri_path = this.remove_ext(uri_path);
-			let index = parseInt(uri_path);
+			const index = parseInt(uri_path);
 			return this.mgr.getClient(resource).then(client => {
 				return client.list_events().then( list => JSON.stringify(list[index], null, 4) );
 			}, (reason) => {
@@ -89,7 +89,7 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<EventNode
 
 	public refresh(resource: any): any {
 		if (!resource || resource.path === '/') {
-			this._onDidChangeTreeData.fire();
+			this._onDidChangeTreeData.fire(null);
 		} else {
 			this._onDidChangeTreeData.fire(resource);
 		}
@@ -177,7 +177,7 @@ export class IOTEventViewer {
 
 	private getNode(): EventNode | undefined {
 		if (vscode.window.activeTextEditor) {
-			let uri = vscode.window.activeTextEditor.document.uri;
+			const uri = vscode.window.activeTextEditor.document.uri;
 			if (uri.scheme === 'freeioe_event') {
 				return { resource: uri, label: 'unknown' };
 			}

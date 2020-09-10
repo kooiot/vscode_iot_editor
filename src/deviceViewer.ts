@@ -23,25 +23,25 @@ export class DeviceTreeModel {
 
 	constructor(readonly mgr: client.ClientMgr) { }
 
-	private getDeviceInfo(uri: vscode.Uri) : Thenable<Object> {
+	private getDeviceInfo(uri: vscode.Uri) : Thenable<any> {
 		return this.mgr.getClient(uri).then( client => {
 			return client.device_info();
 		},
 		(reason) => {
-			let device = this.get_device(uri);
+			const device = this.get_device(uri);
 			return this.mgr.getDeviceConfig(device);
 		});
 	}
-	
+
 	private getApplicationInfo(uri: vscode.Uri): Thenable<freeioe_client.Application> {
-		let inst = this.get_app(uri);
+		const inst = this.get_app(uri);
 		if (!inst) {
 			return Promise.reject(`Not an application node ${uri}`);
 		}
 		return this.mgr.getClient(uri).then( client => {
 			return client.list_apps().then((list) => {
 				return new Promise((c, e) => {
-					for (let app of list) {
+					for (const app of list) {
 						if (app.inst === inst) {
 							return c(app);
 						}
@@ -62,9 +62,9 @@ export class DeviceTreeModel {
 
 	public get roots(): Thenable<DeviceNode[]> {
 		return new Promise((c, e) => {
-			let list: DeviceNode[] = [];
-			for (let dev of this.mgr.Devices) {
-				let device_uri = this.mgr.getDeviceUri(dev.name, 'freeioe');
+			const list: DeviceNode[] = [];
+			for (const dev of this.mgr.Devices) {
+				const device_uri = this.mgr.getDeviceUri(dev.name, 'freeioe');
 				list.push({
 					resource: vscode.Uri.parse(`${device_uri}${dev.name}.json`),
 					device: true,
@@ -99,41 +99,41 @@ export class DeviceTreeModel {
 	}
 
 	public connect(device_node: DeviceNode): Thenable<freeioe_client.WSClient> {
-		let name = device_node.resource.path.substr(1);
-		let device_name = this.remove_ext(name);
+		const name = device_node.resource.path.substr(1);
+		const device_name = this.remove_ext(name);
 		return this.mgr.connect(device_name).then( client => client);
 	}
 	public disconnect(device_node: DeviceNode) : void {
-		let name = device_node.resource.path.substr(1);
-		let device_name = this.remove_ext(name);
+		const name = device_node.resource.path.substr(1);
+		const device_name = this.remove_ext(name);
 		this.mgr.disconnect(device_name);
 	}
 	public setDefault(device_node: DeviceNode) : void {
-		let name = device_node.resource.path.substr(1);
-		let device_name = this.remove_ext(name);
+		const name = device_node.resource.path.substr(1);
+		const device_name = this.remove_ext(name);
 		this.mgr.setDefaultDevice(device_name);
 	}
 
 	private remove_ext(filename : string) {
-		let ext = path.extname(filename);
+		const ext = path.extname(filename);
 		return filename.substr(0, filename.length - ext.length);
 	}
 
 	public get_app(resource: vscode.Uri) : string | undefined {
-		let uri_path = resource.path.substr(1);
-		let uri_path_array = uri_path.split('/');
+		const uri_path = resource.path.substr(1);
+		const uri_path_array = uri_path.split('/');
 		//let device = uri_path.split('/')[0];
-		let app = uri_path_array[1];
+		const app = uri_path_array[1];
 		if (app) {
 			return this.remove_ext(app);
 		}
 		return undefined;
 	}
 	public get_device(resource: vscode.Uri) : string {
-		let uri_path = resource.path.substr(1);
-		let uri_path_array = uri_path.split('/');
+		const uri_path = resource.path.substr(1);
+		const uri_path_array = uri_path.split('/');
 		let device = uri_path_array[0];
-		let app = uri_path_array[1];
+		const app = uri_path_array[1];
 		if (!app) {
 			device = this.remove_ext(device);
 		}
@@ -142,7 +142,7 @@ export class DeviceTreeModel {
 
 	public applicationStart(node: DeviceNode): Thenable<void> {
 		return this.mgr.getClient(node.resource).then(() => {
-			let app = this.get_app(node.resource);
+			const app = this.get_app(node.resource);
 			if (!app) {
 				return Promise.reject(`Node is not inside an application ${node.resource}`);
 			}
@@ -152,7 +152,7 @@ export class DeviceTreeModel {
 
 	public applicationStop(node: DeviceNode): Thenable<void> {
 		return this.mgr.getClient(node.resource).then(() => {
-			let app = this.get_app(node.resource);
+			const app = this.get_app(node.resource);
 			if (!app) {
 				return Promise.reject(`Node is not inside an application ${node.resource}`);
 			}
@@ -162,7 +162,7 @@ export class DeviceTreeModel {
 
 	public applicationRestart(node: DeviceNode): Thenable<void> {
 		return this.mgr.getClient(node.resource).then(() => {
-			let app = this.get_app(node.resource);
+			const app = this.get_app(node.resource);
 			if (!app) {
 				return Promise.reject(`Node is not inside an application ${node.resource}`);
 			}
@@ -172,17 +172,17 @@ export class DeviceTreeModel {
 
 	public applicationConfig(node: DeviceNode): Thenable<void> {
 		return this.mgr.getClient(node.resource).then(() => {
-			let app = this.get_app(node.resource);
+			const app = this.get_app(node.resource);
 			if (!app) {
 				return Promise.reject(`Node is not inside an application ${node.resource}`);
 			}
 			return this.mgr.configApplication(node.resource, app);
 		});
 	}
-	
+
 	public applicationDownload(node: DeviceNode) : Thenable<void> {
 		return this.mgr.getClient(node.resource).then(() => {
-			let app = this.get_app(node.resource);
+			const app = this.get_app(node.resource);
 			if (!app) {
 				return Promise.reject(`Node is not inside an application ${node.resource}`);
 			}
@@ -212,7 +212,7 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<DeviceNod
 	public onInterval() {
         if (vscode.workspace.getConfiguration('iot_editor').get('refresh_device_info') === true) {
 			this.model.roots.then( (devices : DeviceNode[]) => {
-				for (let dev of devices) {
+				for (const dev of devices) {
 					this._onDidChange.fire(dev.resource);
 				}
 			});
@@ -221,7 +221,7 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<DeviceNod
 
 	public refresh(resource?: any): any {
 		if (!resource || resource.scheme === 'freeioe') {
-			this._onDidChangeTreeData.fire();
+			this._onDidChangeTreeData.fire(null);
 		} else {
 			this._onDidChangeTreeData.fire(resource);
 		}
@@ -248,12 +248,12 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<DeviceNod
 
 	private getTreeItemTooltip(element: DeviceNode): string | undefined {
 		if (element.device) {
-			let config = element.config;
+			const config = element.config;
 			if (config) {
 				return `Device SN: ${config.sn}\nHost: ${config.host}\nPort: ${config.port}`;
 			}
 		} else {
-			let app = element.app;
+			const app = element.app;
 			if (app) {
 				return `Application: ${app.name}\nVersion: ${app.version}\nRunning: ${app.running}`;
 			}
@@ -350,7 +350,7 @@ export class IOTDeviceViewer {
 
 	private getNode(): DeviceNode | undefined {
 		if (vscode.window.activeTextEditor) {
-			let uri = vscode.window.activeTextEditor.document.uri;
+			const uri = vscode.window.activeTextEditor.document.uri;
 			if (uri.scheme === 'freeioe') {
 				return { resource: uri, device: true };
 			}

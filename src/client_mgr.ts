@@ -54,7 +54,7 @@ export class ClientMgr {
         }
         return vscode.Uri.parse(`${schema}://localhost/`);
     }
-    
+
     /**
      * don't use this.rootFolder directly since it can be undefined
      */
@@ -92,13 +92,27 @@ export class ClientMgr {
         }
         return Promise.reject(`Device ${device} not found!`);
     }
+
     public connect(device: string): Thenable<WSClient> {
+        let devices = this.configuration.DeviceNames;
+
         for (let client of this.Clients) {
             if (client.Config.name === device) {
                 return client.connect();
             }
+            let found = false;
+            /* Check if the device configuration still exists */
+            for (let i = 0; i < devices.length; i++) {
+                if (devices[i] === device) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                this.appendOutput(client, `Device name changed or device deleted from configuration: ${client.Config.name}`);
+                this.disconnect(client.Config.name);
+            }
         }
-        let devices = this.configuration.DeviceNames;
         for (let i = 0; i < devices.length; i++) {
             if (devices[i] === device) {
                 return this.connectDevice(i);
@@ -177,9 +191,9 @@ export class ClientMgr {
 
     public onDidChangeVisibleTextEditors(editors: vscode.TextEditor[]): void {
     }
-    
-    
-    // private get CurrentApplications(): string[] { 
+
+
+    // private get CurrentApplications(): string[] {
     //     let result: string[] = [];
     //     this.device_apps.forEach((app: Application) => result.push(app.inst));
     //     return result;
@@ -189,18 +203,18 @@ export class ClientMgr {
         this.rootFolder = rootFolder;
         ui = getUI();
         ui.bind(this);
-        
+
         try {
             let conf = vscode.workspace.getConfiguration('iot_editor').get<number>('default');
             if (conf === undefined) { conf = -1;}
 
             this.setupOutputHandlers();
-            
+
             this.configuration = new configs.EditorProperties(this.RootPath, conf);
             this.configuration.DevicesChanged((e) => this.onDevicesChanged(e));
             this.configuration.DefaultDeviceChanged((e) => this.onDefaultDeviceChanged(e));
             this.disposables.push(this.configuration);
-            
+
             this.registerFileWatcher();
         }
         catch(err) {
@@ -260,7 +274,7 @@ export class ClientMgr {
             this.disposables.push(this.logChannel);
         }
     }
-    
+
     public appendOutput(client: WSClient, log: string) {
         if (this.outputChannel) {
             this.outputChannel.appendLine(`${client.Config.name} [${client.Config.host}:${client.Config.port}]: ${log}`);
@@ -374,7 +388,7 @@ export class ClientMgr {
             client.Config.sn = remote_sn;
         }
     }
-    
+
     private on_ws_message( client: WSClient, code: string, data: any) {
         this.appendOutput(client, `WebSocket message: ${code} ${data}`);
     }
@@ -395,7 +409,7 @@ export class ClientMgr {
         }
         return Promise.reject(`Device not connected!`);
     }
-    
+
     private onDevicesChanged(devices: configs.DeviceConfig[]): void {
         console.log('[Client] onDevicesChanged');
         if (this.configuration.DefaultDevice === -1 || this.configuration.DefaultDevice >= devices.length) {
@@ -421,7 +435,7 @@ export class ClientMgr {
         vscode.workspace.getConfiguration('iot_editor').update('default', index);
 
         console.log('[Client] onDefaultDeviceChanged connect to device');
-        
+
         this.connectDevice(index);
     }
 

@@ -10,7 +10,7 @@
     },
     "license": "MIT",
     "engines": {
-        "vscode": "^1.48.0"
+        "vscode": "^1.49.0"
     },
     "homepage": "https://freeioe.org",
     "repository": {
@@ -24,51 +24,57 @@
     "activationEvents": [
         "onFileSystem:ioe",
         "onCommand:iot_editor.workspaceInit",
+        "onCommand:iot_editor.init",
         "onView:IOTNewsViewer",
         "workspaceContains:.vscode/freeioe_devices.json"
     ],
-    "main": "./out/extension",
+    "main": "./out/extension.js",
     "contributes": {
         "configuration": {
             "type": "object",
-            "title": "IOT Editor configuration",
+            "title": "%iot_editor.configuration.title%",
             "properties": {
                 "iot_editor.default": {
                     "type": "number",
                     "default": -1,
-                    "description": "Default device to connect with."
+                    "description": "%iot_editor.configuration.default.title%"
                 },
                 "iot_editor.debug": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Debug mode, which shows more information about communication with device"
+                    "description": "%iot_editor.configuration.debug.title%"
                 },
                 "iot_editor.refresh_device_info": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Auto refresh connected device information (this cause fetch device information every 2.5 seconds)."
+                    "description": "%iot_editor.configuration.refresh_device_info.title%"
                 },
                 "iot_editor.show_explorer_views": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Show device/event viewer in explorer."
+                    "description": "%iot_editor.configuration.show_explorer_views.title%"
                 }
             }
         },
         "commands": [
             {
                 "command": "iot_editor.workspaceInit",
-                "title": "Setup editor workspace",
+                "title": "%iot_editor.workspaceInit.title%",
+                "category": "IOT"
+            },
+            {
+                "command": "iot_editor.init",
+                "title": "%iot_editor.init.title%",
                 "category": "IOT"
             },
             {
                 "command": "iot_editor.activeFS",
-                "title": "Active FileSystem provider",
+                "title": "%iot_editor.activeFS.title%",
                 "category": "IOT"
             },
             {
                 "command": "iot_editor.connect",
-                "title": "Connect to FreeIOE device",
+                "title": "%iot_editor.connect.title%",
                 "category": "IOT",
                 "icon": {
                     "light": "./media/light/connect.svg",
@@ -77,7 +83,7 @@
             },
             {
                 "command": "iot_editor.disconnect",
-                "title": "Disconnect from FreeIOE device",
+                "title": "%iot_editor.disconnect.title%",
                 "category": "IOT",
                 "icon": {
                     "light": "./media/light/disconnect.svg",
@@ -86,7 +92,7 @@
             },
             {
                 "command": "iot_editor.defaultDeviceSelect",
-                "title": "Select the default device to connect...",
+                "title": "%iot_editor.defaultDeviceSelect.title%",
                 "category": "IOT",
                 "icon": {
                     "light": "./media/light/settings.svg",
@@ -95,7 +101,7 @@
             },
             {
                 "command": "iot_editor.configurationEdit",
-                "title": "Edit Configurations...",
+                "title": "%iot_editor.configurationEdit.title%",
                 "category": "IOT",
                 "icon": {
                     "light": "./media/light/settings.svg",
@@ -104,7 +110,7 @@
             },
             {
                 "command": "iot_editor.applicationCreate",
-                "title": "Create new application...",
+                "title": "%iot_editor.applicationCreate.title%",
                 "category": "IOT",
                 "icon": {
                     "light": "./media/light/plus.svg",
@@ -113,7 +119,7 @@
             },
             {
                 "command": "IOTExplorer.applicationConfig",
-                "title": "Config application...",
+                "title": "%iot_editor.ie.applicationConfig.title%",
                 "icon": {
                     "light": "./media/light/settings.svg",
                     "dark": "./media/dark/settings.svg"
@@ -121,7 +127,7 @@
             },
             {
                 "command": "IOTExplorer.applicationStart",
-                "title": "Start application...",
+                "title": "%iot_editor.ie.applicationStart.title%",
                 "icon": {
                     "light": "./media/light/play.svg",
                     "dark": "./media/dark/play.svg"
@@ -129,7 +135,7 @@
             },
             {
                 "command": "IOTExplorer.applicationStop",
-                "title": "Stop application...",
+                "title": "%iot_editor.ie.applicationStop.title%",
                 "icon": {
                     "light": "./media/light/stop.svg",
                     "dark": "./media/dark/stop.svg"
@@ -137,7 +143,7 @@
             },
             {
                 "command": "IOTExplorer.applicationRestart",
-                "title": "Restart application...",
+                "title": "%iot_editor.ie.applicationRestart.title%",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
@@ -145,7 +151,7 @@
             },
             {
                 "command": "IOTExplorer.applicationDownload",
-                "title": "Download application package...",
+                "title": "%iot_editor.ie.applicationDownload.title%",
                 "icon": {
                     "light": "./media/light/download.svg",
                     "dark": "./media/dark/download.svg"
@@ -153,7 +159,7 @@
             },
             {
                 "command": "IOTExplorer.reload",
-                "title": "Reload content",
+                "title": "%iot_editor.ie.reload.title%",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
@@ -161,7 +167,7 @@
             },
             {
                 "command": "IOTDeviceViewer.settings",
-                "title": "Edit Settings",
+                "title": "%iot_editor.idv.settings.title%",
                 "icon": {
                     "light": "./media/light/settings.svg",
                     "dark": "./media/dark/settings.svg"
@@ -169,7 +175,7 @@
             },
             {
                 "command": "IOTDeviceViewer.refresh",
-                "title": "Refresh",
+                "title": "%iot_editor.idv.refresh.title%",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
@@ -177,7 +183,7 @@
             },
             {
                 "command": "IOTDeviceViewer.reload",
-                "title": "Reload content",
+                "title": "%iot_editor.idv.reload.title%",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
@@ -185,15 +191,15 @@
             },
             {
                 "command": "IOTDeviceViewer.openFile",
-                "title": "Open Device Configuration"
+                "title": "%iot_editor.idv.openFile.title%"
             },
             {
                 "command": "IOTDeviceViewer.revealResource",
-                "title": "Reveal in Device View"
+                "title": "%iot_editor.idv.revealResource.title%"
             },
             {
                 "command": "IOTDeviceViewer.connect",
-                "title": "Connect",
+                "title": "%iot_editor.idv.connect.title%",
                 "icon": {
                     "light": "./media/light/connect.svg",
                     "dark": "./media/dark/connect.svg"
@@ -201,7 +207,7 @@
             },
             {
                 "command": "IOTDeviceViewer.disconnect",
-                "title": "Disconnect",
+                "title": "%iot_editor.idv.disconnect.title%",
                 "icon": {
                     "light": "./media/light/disconnect.svg",
                     "dark": "./media/dark/disconnect.svg"
@@ -209,7 +215,7 @@
             },
             {
                 "command": "IOTDeviceViewer.setDefault",
-                "title": "Set as default device",
+                "title": "%iot_editor.idv.setDefault.title%",
                 "icon": {
                     "light": "./media/light/check.svg",
                     "dark": "./media/dark/check.svg"
@@ -217,7 +223,7 @@
             },
             {
                 "command": "IOTDeviceViewer.applicationConfig",
-                "title": "Config application...",
+                "title": "%iot_editor.idv.applicationConfig.title%",
                 "icon": {
                     "light": "./media/light/settings.svg",
                     "dark": "./media/dark/settings.svg"
@@ -225,7 +231,7 @@
             },
             {
                 "command": "IOTDeviceViewer.applicationStart",
-                "title": "Start application...",
+                "title": "%iot_editor.idv.applicationStart.title%",
                 "icon": {
                     "light": "./media/light/play.svg",
                     "dark": "./media/dark/play.svg"
@@ -233,7 +239,7 @@
             },
             {
                 "command": "IOTDeviceViewer.applicationStop",
-                "title": "Stop application...",
+                "title": "%iot_editor.idv.applicationStop.title%",
                 "icon": {
                     "light": "./media/light/stop.svg",
                     "dark": "./media/dark/stop.svg"
@@ -241,7 +247,7 @@
             },
             {
                 "command": "IOTDeviceViewer.applicationRestart",
-                "title": "Restart application...",
+                "title": "%iot_editor.idv.applicationRestart.title%",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
@@ -249,7 +255,7 @@
             },
             {
                 "command": "IOTDeviceViewer.applicationDownload",
-                "title": "Download application package...",
+                "title": "%iot_editor.idv.applicationDownload.title%",
                 "icon": {
                     "light": "./media/light/download.svg",
                     "dark": "./media/dark/download.svg"
@@ -257,7 +263,7 @@
             },
             {
                 "command": "IOTEventViewer.refresh",
-                "title": "Refresh",
+                "title": "%iot_editor.iev.refresh.title%",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
@@ -265,7 +271,7 @@
             },
             {
                 "command": "IOTEventViewer.reload",
-                "title": "Reload content",
+                "title": "%iot_editor.iev.reload.title%",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
@@ -273,15 +279,15 @@
             },
             {
                 "command": "IOTEventViewer.openFile",
-                "title": "Open Device Event"
+                "title": "%iot_editor.iev.openFile.title%"
             },
             {
                 "command": "IOTEventViewer.revealResource",
-                "title": "Reveal in Device Event"
+                "title": "%iot_editor.iev.revealResource.title%"
             },
             {
                 "command": "IOTNewsViewer.refresh",
-                "title": "Refresh",
+                "title": "%iot_editor.inv.refresh.title%",
                 "icon": {
                     "light": "./media/light/refresh.svg",
                     "dark": "./media/dark/refresh.svg"
@@ -289,32 +295,37 @@
             },
             {
                 "command": "IOTNewsViewer.openFile",
-                "title": "Open FreeIOE News"
+                "title": "%iot_editor.inv.openFile.title%"
             }
         ],
         "menus": {
             "commandPalette": [
                 {
-                    "command": "iot_editor.workspaceInit"
+                    "command": "iot_editor.workspaceInit",
+                    "when": "workbenchState != workspace"
+                },
+                {
+                    "command": "iot_editor.init",
+                    "when": "workbenchState == workspace"
                 },
                 {
                     "command": "iot_editor.connect"
                 },
                 {
-                    "when": "resourceScheme == 'ioe'",
-                    "command": "IOTExplorer.applicationStart"
+                    "command": "IOTExplorer.applicationStart",
+                    "when": "resourceScheme == 'ioe'"
                 },
                 {
-                    "when": "resourceScheme == 'ioe'",
-                    "command": "IOTExplorer.applicationStop"
+                    "command": "IOTExplorer.applicationStop",
+                    "when": "resourceScheme == 'ioe'"
                 },
                 {
-                    "when": "resourceScheme == 'ioe'",
-                    "command": "IOTExplorer.applicationRestart"
+                    "command": "IOTExplorer.applicationRestart",
+                    "when": "resourceScheme == 'ioe'"
                 },
                 {
-                    "when": "resourceScheme == 'ioe'",
-                    "command": "IOTExplorer.applicationDownload"
+                    "command": "IOTExplorer.applicationDownload",
+                    "when": "resourceScheme == 'ioe'"
                 }
             ],
             "view/title": [
@@ -460,7 +471,7 @@
             "activitybar": [
                 {
                     "id": "iot_explorer",
-                    "title": "FreeIOE Explorer",
+                    "title": "%iot_editor.iot_explorer.title%",
                     "icon": "media/freeioe_explorer.svg",
                     "when": "config.iot_editor.show_explorer_views == true"
                 }
@@ -470,19 +481,19 @@
             "explorer": [
                 {
                     "id": "IOTDeviceViewer",
-                    "name": "FreeIOE Devices",
+                    "name": "%iot_editor.iot_device_viewer.title%",
                     "when": "config.iot_editor.show_explorer_views == true"
                 },
                 {
                     "id": "IOTEventViewer",
-                    "name": "Events",
+                    "name": "%iot_editor.iot_event_viewer.title%",
                     "when": "config.iot_editor.show_explorer_views == true"
                 }
             ],
             "iot_explorer": [
                 {
                     "id": "IOTNewsViewer",
-                    "name": "FreeIOE News"
+                    "name": "%iot_editor.iot_news_viewer.title%"
                 }
             ]
         }
@@ -490,22 +501,37 @@
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
+        "lint": "eslint src --ext ts",
         "watch": "tsc -watch -p ./",
-        "lint": "eslint . --ext .ts,.tsx"
+        "pretest": "npm run compile && npm run lint",
+        "clean": "gulp clean"
     },
     "devDependencies": {
-        "@types/mocha": "^8.0.3",
-        "@types/node": "^14.6.4",
-        "@types/vscode": "^1.48.0",
+        "@types/vscode": "^1.49.0",
+        "@types/glob": "^7.1.3",
+        "@types/mocha": "^8.0.0",
+        "@types/node": "^14.0.27",
+        "eslint": "^7.9.0",
+        "@typescript-eslint/eslint-plugin": "^4.1.1",
+        "@typescript-eslint/parser": "^4.1.1",
+        "glob": "^7.1.6",
+        "del": "^5.1.0",
+        "mocha": "^8.1.3",
+        "event-stream": "^4.0.1",
+        "gulp": "^4.0.2",
+        "gulp-filter": "^6.0.0",
+        "gulp-sourcemaps": "^2.6.5",
+        "gulp-typescript": "^6.0.0-alpha.1",
+        "run-sequence": "^2.2.1",
         "typescript": "^4.0.2",
-        "@typescript-eslint/eslint-plugin": "^4.1.0",
-        "@typescript-eslint/parser": "^4.1.0",
-        "eslint": "^7.8.1"
+        "vsce": "^1.79.5",
+        "vscode-nls-dev": "^3.3.2"
     },
     "dependencies": {
         "@types/request": "^2.48.5",
         "@types/ws": "^7.2.6",
         "request": "^2.88.2",
-        "ws": "^7.3.1"
+        "ws": "^7.3.1",
+        "vscode-nls": "^5.0.0"
     }
 }

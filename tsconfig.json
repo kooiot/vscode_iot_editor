@@ -4,6 +4,7 @@
         "target": "es2019",
         "outDir": "out",
         "lib": ["ES2019"],
+        "strict": true,
         "sourceMap": true,
         "rootDir": "src"
     },

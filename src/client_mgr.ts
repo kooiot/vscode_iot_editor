@@ -10,7 +10,7 @@ import { WSAppEvent, WSEvent } from './freeioe_ws';
 
 let ui: UI;
 
-let previousEditorSettings: { [key: string]: any } = {};
+const previousEditorSettings: { [key: string]: any } = {};
 
 interface FolderSettingsParams {
     currentDevice: number;
@@ -47,7 +47,7 @@ export class ClientMgr {
         return this.configuration.Devices;
     }
     public getDeviceUri(device: string, schema: string) : vscode.Uri {
-        for (let c of this.configuration.Devices) {
+        for (const c of this.configuration.Devices) {
             if (c.name === device) {
                 return vscode.Uri.parse(`${schema}://${c.host}:${c.port}/`);
             }
@@ -66,7 +66,7 @@ export class ClientMgr {
     }
     public getClient(device_uri: vscode.Uri) : Thenable<WSClient> {
         return new Promise((c, e) => {
-            for (let client of this.Clients) {
+            for (const client of this.Clients) {
                 if (client.FsUri.authority === device_uri.authority) {
                     return c(client);
                 }
@@ -76,7 +76,7 @@ export class ClientMgr {
     }
     public getClientByName(device: string): Thenable<WSClient> {
         return new Promise((c, e) => {
-            for (let client of this.Clients) {
+            for (const client of this.Clients) {
                 if (client.Config.name === device) {
                     return c(client);
                 }
@@ -85,7 +85,7 @@ export class ClientMgr {
         });
     }
     public getDeviceConfig(device: string) : Thenable<configs.DeviceConfig> {
-        for (let c of this.configuration.Devices) {
+        for (const c of this.configuration.Devices) {
             if (c.name === device) {
                 return Promise.resolve(c);
             }
@@ -94,9 +94,9 @@ export class ClientMgr {
     }
 
     public connect(device: string): Thenable<WSClient> {
-        let devices = this.configuration.DeviceNames;
+        const devices = this.configuration.DeviceNames;
 
-        for (let client of this.Clients) {
+        for (const client of this.Clients) {
             if (client.Config.name === device) {
                 return client.connect();
             }
@@ -121,7 +121,7 @@ export class ClientMgr {
         return Promise.reject(`Device ${device} not found!`);
     }
     public disconnect(device: string) {
-        let devices = this.configuration.DeviceNames;
+        const devices = this.configuration.DeviceNames;
         for (let i = 0; i < devices.length; i++) {
             if (devices[i] === device) {
                 return this.disconnectDevice(i);
@@ -133,14 +133,14 @@ export class ClientMgr {
             return this._clients.get(device) !== undefined;
         }
         if (typeof device === 'string') {
-            for (let client of this.Clients) {
+            for (const client of this.Clients) {
                 if (client.Config.name === device) {
                     return true;
                 }
             }
         }
         if (device instanceof vscode.Uri) {
-            for (let client of this.Clients) {
+            for (const client of this.Clients) {
                 if (client.FsUri.authority === device.authority) {
                     return true;
                 }
@@ -150,7 +150,7 @@ export class ClientMgr {
     }
     public isConnected(device : number | string | vscode.Uri) : boolean {
         if (typeof device === 'string') {
-            for (let c of this._clients) {
+            for (const c of this._clients) {
                 if (c[1].Config.name === device) {
                     device = c[0];
                     break;
@@ -158,7 +158,7 @@ export class ClientMgr {
             }
         }
         if (device instanceof vscode.Uri) {
-            for (let c of this._clients) {
+            for (const c of this._clients) {
                 if (c[1].FsUri.authority === device.authority) {
                     device = c[0];
                     break;
@@ -166,13 +166,13 @@ export class ClientMgr {
             }
         }
         if (typeof device === 'number') {
-            let client = this._clients.get(device);
+            const client = this._clients.get(device);
             return client ? client.Connected : false;
         }
         return false;
     }
     public setDefaultDevice(device: string) {
-        let deviceNames = this.configuration.DeviceNames;
+        const deviceNames = this.configuration.DeviceNames;
         for (let i = 0; i < deviceNames.length; i++) {
             if (deviceNames[i] === device) {
                 return this.configuration.select(i);
@@ -190,6 +190,7 @@ export class ClientMgr {
     }
 
     public onDidChangeVisibleTextEditors(editors: vscode.TextEditor[]): void {
+        //
     }
 
 
@@ -312,19 +313,19 @@ export class ClientMgr {
     }
 
     private connectDevice(index: number) : Thenable<WSClient> {
-        let conf = this.configuration.Devices[index];
+        const conf = this.configuration.Devices[index];
 
         if (conf) {
-            let client = this._clients.get(index);
+            const client = this._clients.get(index);
             if (client) {
-                let config = client.Config;
+                const config = client.Config;
                 if (this.ConfigEqual(config, conf)) {
                     return Promise.resolve(client);
                 }
                 this.disconnectDevice(index);
             }
 
-            let ws_client = new WSClient(conf, this.configuration.AuthCode);
+            const ws_client = new WSClient(conf, this.configuration.AuthCode);
             this.appendOutput(ws_client, `Start to connect device: ${conf.host}:${conf.port}`);
             this._clients.set(index, ws_client);
             ws_client.on("device_sn_diff", (remote_sn : string) => this.on_device_sn_diff(ws_client, remote_sn));
@@ -399,9 +400,11 @@ export class ClientMgr {
         return Promise.resolve();
     }
     private disconnectDevice( index: number ) : Thenable<void> {
-        let client = this._clients.get(index);
+        const client = this._clients.get(index);
         if (client !== undefined) {
             return this._disconnectDevice(client).then( () => {
+                if (!client)
+                    return;
                 this._deviceStatus.fire(client);
                 this._clients.delete(index);
                 return Promise.resolve();
@@ -415,7 +418,7 @@ export class ClientMgr {
         if (this.configuration.DefaultDevice === -1 || this.configuration.DefaultDevice >= devices.length) {
             return;
         }
-        let params: FolderSettingsParams = {
+        const params: FolderSettingsParams = {
             devices: devices,
             currentDevice: this.configuration.DefaultDevice
         };
@@ -471,7 +474,7 @@ export class ClientMgr {
             if (index < 0) {
                 return;
             }
-            let client = this._clients.get(index);
+            const client = this._clients.get(index);
             if (!client) {
                 vscode.window.showInformationMessage(`Device ${this.configuration.DeviceNames[index]} is not connected!`);
                 return;
@@ -541,9 +544,9 @@ export class ClientMgr {
     }
     private updateDeviceSN(client: WSClient, sn:string) {
         client.Config.sn = sn;
-        for (let c of this._clients) {
+        for (const c of this._clients) {
             if (c[1] === client) {
-                let conf = this.configuration.Devices[c[0]];
+                const conf = this.configuration.Devices[c[0]];
                 if (conf) {
                     conf.sn = sn;
                 }
@@ -560,17 +563,17 @@ export class ClientMgr {
     }
 
     public dispose(): Thenable<void> {
-        for (let c of this._clients) {
+        for (const c of this._clients) {
             this.disconnectDevice(c[0]);
         }
 
-        let promise: Thenable<void> = Promise.resolve();
+        const promise: Thenable<void> = Promise.resolve();
         return promise.then(() => {
             this.disposables.forEach((d) => d.dispose());
             this.disposables = [];
 
-            for (let key in this.model) {
-                if (this.model.hasOwnProperty(key)) {
+            for (const key in this.model) {
+                if (Object.prototype.hasOwnProperty.call(this.model, key)) {
                     //this.model[key].dispose();
                 }
             }

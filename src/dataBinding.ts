@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 export class DataBinding<T> {
     private value: T;
     private valueChanged = new vscode.EventEmitter<T>();
-    private isActive: boolean = true;
+    private isActive = true;
 
     constructor(value: T) {
         this.value = value;

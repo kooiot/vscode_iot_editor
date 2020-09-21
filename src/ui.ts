@@ -47,11 +47,11 @@ export class UI {
     }
 
     public showConfigurations(configurationNames: string[]): Thenable<number> {
-        let options: vscode.QuickPickOptions = {};
+        const options: vscode.QuickPickOptions = {};
         options.placeHolder = "Select a Configuration...";
 
-        let items: IndexableQuickPickItem[] = [];
-        for (let i: number = 0; i < configurationNames.length; i++) {
+        const items: IndexableQuickPickItem[] = [];
+        for (let i = 0; i < configurationNames.length; i++) {
             items.push({ label: configurationNames[i], description: "", index: i });
         }
         items.push({ label: "Edit Configurations...", description: "", index: configurationNames.length });
@@ -66,10 +66,10 @@ export class UI {
     }
 
     public showWorkspaces(workspaceNames: { name: string; key: string }[]): Thenable<string> {
-        let options: vscode.QuickPickOptions = {};
+        const options: vscode.QuickPickOptions = {};
         options.placeHolder = "Select a Workspace...";
 
-        let items: KeyedQuickPickItem[] = [];
+        const items: KeyedQuickPickItem[] = [];
         workspaceNames.forEach(name => items.push({ label: name.name, description: "", key: name.key }));
 
         return vscode.window.showQuickPick(items, options)
@@ -82,8 +82,8 @@ export class UI {
     }
 
     public showIncorrectSN(sn: string, conf_sn: string) : Thenable<string> {
-        let options: vscode.MessageOptions =  {modal: false};
-        let msg = `Device SN ${sn} is different with configuration ${conf_sn}`;
+        const options: vscode.MessageOptions =  {modal: false};
+        const msg = `Device SN ${sn} is different with configuration ${conf_sn}`;
 
         return vscode.window.showWarningMessage(msg, options, { title: "Use " + sn },{ title: "Abort", isCloseAffordance: true })
             .then(selection => {
@@ -95,11 +95,11 @@ export class UI {
     }
 
     public showApplications(apps: Application[]): Thenable<number> {
-        let options: vscode.QuickPickOptions = {};
+        const options: vscode.QuickPickOptions = {};
         options.placeHolder = "Select a Application...";
 
-        let items: IndexableQuickPickItem[] = [];
-        for (let i: number = 0; i < apps.length; i++) {
+        const items: IndexableQuickPickItem[] = [];
+        for (let i = 0; i < apps.length; i++) {
             items.push({ label: apps[i].inst, description: "", detail: "Application: " + apps[i].name + "\t Version: " + apps[i].version, index: i });
         }
         items.push({ label: "Create new application...", description: "", index: apps.length });
@@ -112,13 +112,13 @@ export class UI {
                 return selection.index;
             });
     }
-    
+
     public showApplicationCreate(): Thenable<Application|undefined>  {
         return vscode.window.showInputBox({prompt: "Please input application name"}).then(app_name => {
             if (app_name) {
                 return vscode.window.showInputBox({prompt: "Please input application instance"}).then(app_inst => {
                     if (app_inst) {
-                        let app: Application = {
+                        const app: Application = {
                             inst: app_inst,
                             name: app_name,
                             version: 0,

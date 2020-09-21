@@ -7,27 +7,28 @@
 import * as path from 'path';
 import * as fs from "fs";
 import * as vscode from 'vscode';
-const configVersion: number = 2;
 
-let defaultSettings: string = `{
+const configVersion = 2;
+
+const defaultSettings = `{
     "version": ${configVersion},
     "auth_code": "123456789",
     "devices": [
         {
-            "name": "Device1",
-            "desc": "Device authed by private auth code",
-            "host": "192.168.0.245",
-            "port": 8818,
-            "sn": ""
-        },
-        {
-            "name": "Device2",
-            "desc": "Device authed by username and password",
-            "host": "192.168.0.245",
+            "name": "ThingsLink,
+            "desc": "Login to device by username and password",
+            "host": "192.168.1.248",
             "port": 8818,
             "sn": "",
             "user": "admin",
             "password": "admin1"
+        },
+        {
+            "name": "ThingsLink",
+            "desc": "Login to device by ThingsCloud access key",
+            "host": "192.168.1.248",
+            "port": 8818,
+            "sn": ""
         }
     ]
 }
@@ -53,7 +54,7 @@ export class EditorProperties {
     private propertiesFile: vscode.Uri|undefined = undefined;
     private readonly configFolder: string;
     private configurationJson: ConfigurationJson|undefined = undefined;
-    private currentDeviceIndex: number = -1;
+    private currentDeviceIndex = -1;
     private configFileWatcher: vscode.FileSystemWatcher|undefined = undefined;
     private configFileWatcherFallbackTime: Date = new Date(); // Used when file watching fails.
     private disposables: vscode.Disposable[] = [];
@@ -62,14 +63,14 @@ export class EditorProperties {
 
     // Any time the `defaultSettings` are parsed and assigned to `this.configurationJson`,
     // we want to track when the default includes have been added to it.
-    private configurationIncomplete: boolean = true;
+    private configurationIncomplete = true;
 
     constructor(rootPath: string, config: number) {
         console.assert(rootPath !== undefined);
         this.configFolder = path.join(rootPath, ".vscode");
         this.currentDeviceIndex = config;
 
-        let configFilePath: string = path.join(this.configFolder, "freeioe_devices.json");
+        const configFilePath = path.join(this.configFolder, "freeioe_devices.json");
         if (fs.existsSync(configFilePath)) {
             this.propertiesFile = vscode.Uri.file(configFilePath);
             setTimeout(async ()=>{
@@ -105,7 +106,7 @@ export class EditorProperties {
     public get DefaultDevice(): number { return this.currentDeviceIndex; }
 
     public get DeviceNames(): string[] {
-        let result: string[] = [];
+        const result: string[] = [];
         if (this.configurationJson) {
             this.configurationJson.devices.forEach((config: DeviceConfig) => result.push(config.name));
         }
@@ -177,29 +178,19 @@ export class EditorProperties {
                 throw err;
             }
         } else {
-            fs.mkdir(this.configFolder, (e: NodeJS.ErrnoException | undefined) => {
+            fs.mkdir(this.configFolder, (e: NodeJS.ErrnoException | null) => {
                 if (!e || e.code === 'EEXIST') {
-                    let dirPathEscaped: string = this.configFolder.replace("#", "%23");
-                    let fullPathToFile: string = path.join(dirPathEscaped, "freeioe_devices.json");
-                    let filePath: vscode.Uri = vscode.Uri.parse("untitled:" + fullPathToFile);
+                    const dirPathEscaped: string = this.configFolder.replace("#", "%23");
+                    const fullPathToFile: string = path.join(dirPathEscaped, "freeioe_devices.json");
+                    const filePath: vscode.Uri = vscode.Uri.parse("untitled:" + fullPathToFile);
                     vscode.workspace.openTextDocument(filePath).then((document: vscode.TextDocument) => {
-                        let edit: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
+                        const edit: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
                         if (this.configurationJson === undefined) {
                             this.resetToDefaultSettings(true);
                         }
-                        edit.insert(document.uri, new vscode.Position(0, 0), JSON.stringify(this.configurationJson, null, 4));
+
                         vscode.workspace.applyEdit(edit).then((status) => {
-                            // Fix for issue 163
-                            // https://github.com/Microsoft/vscppsamples/issues/163
-                            // Save the file to disk so that when the user tries to re-open the file it exists.
-                            // Before this fix the file existed but was unsaved, so we went through the same
-                            // code path and reapplied the edit.
-                            document.save().then(() => {
-                                this.propertiesFile = vscode.Uri.file(path.join(this.configFolder, "freeioe_devices.json"));
-                                vscode.workspace.openTextDocument(this.propertiesFile).then((document: vscode.TextDocument) => {
-                                    onSuccess(document);
-                                });
-                            });
+                            onSuccess(document);
                         });
                     });
                 }
@@ -234,17 +225,17 @@ export class EditorProperties {
             return;
         }
         try {
-            let readResults: string = fs.readFileSync(this.propertiesFile.fsPath, 'utf8');
+            const readResults: string = fs.readFileSync(this.propertiesFile.fsPath, 'utf8');
             if (readResults === "") {
                 return; // Repros randomly when the file is initially created. The parse will get called again after the file is written.
             }
 
             // Try to use the same configuration as before the change.
-            let newJson: ConfigurationJson = JSON.parse(readResults);
+            const newJson: ConfigurationJson = JSON.parse(readResults);
             if (!newJson || !newJson.devices || newJson.devices.length === 0) {
                 throw { message: "Invalid configuration file. There must be at least one configuration present in the array." };
             }
-            let tempSet : Set<string> = new Set();
+            const tempSet : Set<string> = new Set();
             newJson.devices.forEach((config: DeviceConfig) => tempSet.add(config.name));
             if (tempSet.size !== newJson.devices.length) {
                 throw { message: "Invalid configuration file. Duplicated device name found!" };
@@ -252,7 +243,7 @@ export class EditorProperties {
 
             if (!this.configurationIncomplete && this.configurationJson && this.configurationJson.devices &&
                 this.DefaultDevice < this.configurationJson.devices.length && this.DefaultDevice !== -1) {
-                for (let i: number = 0; i < newJson.devices.length; i++) {
+                for (let i = 0; i < newJson.devices.length; i++) {
                     if (newJson.devices[i].name === this.configurationJson.devices[this.DefaultDevice].name) {
                         this.currentDeviceIndex = i;
                         break;
@@ -268,7 +259,7 @@ export class EditorProperties {
             // the system includes were available.
             this.configurationIncomplete = false;
 
-            let dirty: boolean = false;
+            let dirty = false;
             if (this.configurationJson.version !== configVersion) {
                 dirty = true;
                 // if (this.configurationJson.version === undefined) {
@@ -313,7 +304,7 @@ export class EditorProperties {
             return;
         }
         // Check for change properties in case of file watcher failure.
-        let propertiesFile: string = path.join(this.configFolder, "freeioe_devices.json");
+        const propertiesFile: string = path.join(this.configFolder, "freeioe_devices.json");
         fs.stat(propertiesFile, (err, stats) => {
             if (err) {
                 console.log(err);

@@ -4,7 +4,7 @@ import * as events from 'events';
 import * as vscode from 'vscode';
 import WebSocket = require('ws');
 
-        
+
 export interface WSMessage {
     id: number;
     code: string;
@@ -31,7 +31,7 @@ export class FreeIOEWS extends events.EventEmitter {
     private user: string;
     private password: string;
     private websocket: WebSocket | undefined;
-    private msg_id: number = 0;
+    private msg_id = 0;
     private callback_map = new Map<number, WSCallback>();
     private reconnect_timer: NodeJS.Timer | undefined;
     private connected = false;
@@ -64,7 +64,7 @@ export class FreeIOEWS extends events.EventEmitter {
         if (this.websocket || this.reconnect_timer) {
             return;
         }
-        let ws = new WebSocket(this.address);
+        const ws = new WebSocket(this.address);
         ws.on('open',  () => this.on_ws_open());
         ws.on('close', (code: number, reason: string) => this.on_ws_close(code, reason));
         ws.on('error', (error: Error) => this.on_ws_error(error));
@@ -74,17 +74,17 @@ export class FreeIOEWS extends events.EventEmitter {
 
     private formatDateTime(date: number): string {
         // 2018-08-09 14:33:13.256
-        let tm = new Date(date);
+        const tm = new Date(date);
 
         //return string
-        var returnDate = "";
-        var dd = tm.getDate();
-        var mm = tm.getMonth() + 1; //because January is 0! 
-        var yyyy = tm.getFullYear();
-        var min = tm.getMinutes();
-        var hour = tm.getHours();
-        var sec = tm.getSeconds();
-        var ms = tm.getMilliseconds();
+        let returnDate = "";
+        const dd = tm.getDate();
+        const mm = tm.getMonth() + 1; //because January is 0!
+        const yyyy = tm.getFullYear();
+        const min = tm.getMinutes();
+        const hour = tm.getHours();
+        const sec = tm.getSeconds();
+        const ms = tm.getMilliseconds();
 
         //Interpolation date
         returnDate += yyyy;
@@ -142,7 +142,7 @@ export class FreeIOEWS extends events.EventEmitter {
         if (this.closed || this.reconnect_timer) {
             return;
         }
-        
+
         this.reconnect_timer = setTimeout(async ()=>{
             this.reconnect_timer = undefined;
             this.connect();
@@ -152,8 +152,8 @@ export class FreeIOEWS extends events.EventEmitter {
         this.appendOutput(`unexpected response: ${error}`);
     }
     private on_ws_message(data: string) {
-        let msg: WSMessage = Object.assign({}, JSON.parse(data));
-        let func: WSCallback | undefined = this.callback_map.get(msg.id);
+        const msg: WSMessage = Object.assign({}, JSON.parse(data));
+        const func: WSCallback | undefined = this.callback_map.get(msg.id);
         if (func !== undefined) {
             this.callback_map.delete(msg.id);
             func(msg);
@@ -161,7 +161,7 @@ export class FreeIOEWS extends events.EventEmitter {
         }
         if (msg.code === 'info') {
             this.emit('info', msg.data.sn, msg.data.beta);
-            this.appendOutput("Send login request..."); 
+            this.appendOutput("Send login request...");
             this.send_login().then(msg => {
                 this.emit('login', msg.data.result, msg.data.message);
             }, (reason) => {
@@ -169,20 +169,20 @@ export class FreeIOEWS extends events.EventEmitter {
             });
         }
         else if (msg.code === 'log') {
-            let tm = this.formatDateTime(<number>msg.data.timestamp * 1000);
+            const tm = this.formatDateTime(<number>msg.data.timestamp * 1000);
             this.appendLog(`[${tm}] [${msg.data.level}] [${msg.data.process}] ${msg.data.content} `);
-        } 
+        }
         else if (msg.code === 'event') {
-            let data: WSEvent = Object.assign({}, msg.data);
+            const data: WSEvent = Object.assign({}, msg.data);
             this.emit("event", data);
-        } 
+        }
         else if (msg.code === 'app_event') {
-            let data: WSAppEvent = Object.assign({}, msg.data);
+            const data: WSAppEvent = Object.assign({}, msg.data);
             this.emit("app_event", data);
-        } 
+        }
         else if (msg.code === 'comm') {
-            let tm = this.formatDateTime(<number>msg.data.ts * 1000);
-            let data = new Buffer(msg.data.data, 'base64');
+            const tm = this.formatDateTime(<number>msg.data.ts * 1000);
+            const data = new Buffer(msg.data.data, 'base64');
             this.appendComm(`[${tm}] [${msg.data.dir}] [${msg.data.sn}] ${data.toString('hex')} `);
         }
         else {
@@ -190,11 +190,11 @@ export class FreeIOEWS extends events.EventEmitter {
         }
     }
     private send_ws_message(code: string, data:any, callback?: WSCallback, cb?: (err: Error) => void) {
-        var msg_id = this.msg_id++;
+        const msg_id = this.msg_id++;
         if (callback !== undefined) {
             this.callback_map.set(msg_id, callback);
         }
-        let msg: WSMessage = {
+        const msg: WSMessage = {
             id: msg_id,
             code: code,
             data: data
@@ -212,8 +212,8 @@ export class FreeIOEWS extends events.EventEmitter {
         });
     }
     private send_login() : Thenable<WSMessage> {
-		return new Promise((c, e) => {            
-            let data = {
+		return new Promise((c, e) => {
+            const data = {
                 user: this.user,
                 passwd: this.password
             };
@@ -247,18 +247,17 @@ export class FreeIOEWS extends events.EventEmitter {
 
     public app_new(app:string, inst:string) : Thenable<WSMessage> {
 		return new Promise((c, e) => {
-            let data = {
+            const data = {
                 app: app,
                 inst: inst
             };
             this.send_ws_message("app_new", data, (msg) => { c(msg); }, (err) => { e(err); });
         });
     }
-    
 
     public app_start(inst:string) : Thenable<WSMessage> {
 		return new Promise((c, e) => {
-            let data = {
+            const data = {
                 inst: inst
             };
             this.send_ws_message("app_start", data, (msg) => { c(msg); }, (err) => { e(err); });
@@ -267,7 +266,7 @@ export class FreeIOEWS extends events.EventEmitter {
 
     public app_stop(inst: string, reason:string) : Thenable<WSMessage> {
 		return new Promise((c, e) => {
-            let data = {
+            const data = {
                 inst: inst,
                 reason: reason
             };
@@ -299,9 +298,9 @@ export class FreeIOEWS extends events.EventEmitter {
     public event_list(): Thenable<WSEvent[]> {
         return new Promise((c, e) => {
             this.send_ws_message("event_list", {}, (msg) => {
-                let data = msg.data;
+                const data = msg.data;
                 if (data.result) {
-                    let list: WSEvent[] = Object.assign([], data.data);
+                    const list: WSEvent[] = Object.assign([], data.data);
                     c(list);
                 } else {
                     e(data.message);
@@ -320,13 +319,13 @@ export class FreeIOEWS extends events.EventEmitter {
             this.websocket = undefined;
         }
     }
-    
+
     public dispose(): Thenable<void> {
         if (this.websocket) {
             this.websocket.close();
         }
-        
-        let promise: Thenable<void> = Promise.resolve();
+
+        const promise: Thenable<void> = Promise.resolve();
         return promise.then(() => {
             this.disposables.forEach((d) => d.dispose());
             this.disposables = [];

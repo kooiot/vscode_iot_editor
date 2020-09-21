@@ -28,14 +28,14 @@ export interface ApplicationFileNode {
 
 export interface IOTFileStat {
     mode: string; // file, directory,link,socket,named pipe,char device,block device or other
-    access: number; 
+    access: number;
     modification: number;
     size: number;
 }
 
 export interface DeviceInfo {
     config: DeviceConfig;
-    device: Object;
+    device: any;
 }
 
 export class WSClient extends events.EventEmitter {
@@ -43,13 +43,13 @@ export class WSClient extends events.EventEmitter {
     //private config: DeviceConfig;
     private _beta = false;
     private ws_con: FreeIOEWS;
-    private connected: boolean = false;
+    private connected = false;
     private event_buf: WSEvent[] = [];
 
     constructor( private config : DeviceConfig, private auth_code : string ) {
         super();
         //this.config = Object.assign({}, config);
-        let device_ws = "ws://" + this.config.host + ":" + this.config.port;
+        const device_ws = "ws://" + this.config.host + ":" + this.config.port;
 
         let user = "admin";
         let password = "admin1";
@@ -146,7 +146,7 @@ export class WSClient extends events.EventEmitter {
 
             /// Buffer the events
             this.list_events().then( events => {
-                for (let event of events) {
+                for (const event of events) {
                     this.event_buf.push(event);
                 }
             });
@@ -171,7 +171,7 @@ export class WSClient extends events.EventEmitter {
         }
     }
 
-    public device_info() : Thenable<Object> {
+    public device_info() : Thenable<any> {
         this.appendOutput('Get device info');
 		return this.ws_con.device_info().then(msg => { return { config: this.config, device: Object.assign({}, msg.data) }; });
     }
@@ -180,7 +180,7 @@ export class WSClient extends events.EventEmitter {
         this.appendOutput(`Create Application ${app.inst} ${app.name}`);
         return this.ws_con.app_new(app.name, app.inst).then(msg => {
             return new Promise((c, e) => {
-                let data = msg.data;
+                const data = msg.data;
                 if (data.result === true) {
                     app.version = 0;
                     app.islocal = 1;
@@ -194,7 +194,7 @@ export class WSClient extends events.EventEmitter {
     }
 
     public restart_app(inst: string, reason: string): Thenable<void> {
-        this.appendOutput(`Restart Application ${inst}`);   
+        this.appendOutput(`Restart Application ${inst}`);
         return this.stop_app(inst, reason).then(() => {
                 sleep(3000);
                 return this.start_app(inst);
@@ -204,7 +204,7 @@ export class WSClient extends events.EventEmitter {
         this.appendOutput(`Start Application ${inst}`);
         return this.ws_con.app_start(inst).then((msg) => {
             return new Promise((c, e) => {
-                let data = msg.data;
+                const data = msg.data;
                 if (data.result === true) {
                     return c();
                 } else {
@@ -215,10 +215,10 @@ export class WSClient extends events.EventEmitter {
         });
     }
     public stop_app(inst: string, reason: string): Thenable<void> {
-        this.appendOutput(`Stop Application ${inst}`); 
+        this.appendOutput(`Stop Application ${inst}`);
         return this.ws_con.app_stop(inst, reason).then((msg) => {
             return new Promise((c, e) => {
-                let data = msg.data;
+                const data = msg.data;
                 if (data.result === true) {
                     return c();
                 } else {
@@ -229,10 +229,10 @@ export class WSClient extends events.EventEmitter {
         });
     }
     public download_app(inst: string, version: string | undefined): Thenable<string> {
-        this.appendOutput(`Stop Application ${inst}`); 
+        this.appendOutput(`Stop Application ${inst}`);
         return this.ws_con.app_download(inst, version).then((msg) => {
             return new Promise((c, e) => {
-                let data = msg.data;
+                const data = msg.data;
                 if (data.result === true) {
                     return c(data.content);
                 } else {
@@ -247,12 +247,12 @@ export class WSClient extends events.EventEmitter {
         this.appendOutput(`Get Application List`);
         return this.ws_con.app_list().then((msg) => {
             return new Promise((c, e) => {
-                let data = msg.data;
+                const data = msg.data;
                 interface AppList { [key: string]: Application; }
 
-                let list: AppList = Object.assign({}, data);
-                let apps: Application[] = [];
-                for (let k in list) {
+                const list: AppList = Object.assign({}, data);
+                const apps: Application[] = [];
+                for (const k in list) {
                     if (!list[k].inst) {
                         list[k].inst = k;
                     }
@@ -274,14 +274,14 @@ export class WSClient extends events.EventEmitter {
             sub_path = '/';
         }
         this.appendOutput(`Dir Application ${inst} ${sub_path}`);
-        let qs = {
+        const qs = {
             app: inst,
             operation: 'get_node',
             id: sub_path
         };
         return this.ws_con.editor_get(qs).then((msg) => {
             return new Promise((c, e) => {
-                let data = msg.data;
+                const data = msg.data;
                 if (data.result !== true) {
                     this.appendOutput(`Dir Application error ${data.message}`);
                     return e(`Dir application failed! ${data.message}`);
@@ -289,11 +289,11 @@ export class WSClient extends events.EventEmitter {
                 if (data.content === "[]") {
                     data.content = [];
                 }
-                let nodes: ApplicationFileNode[] = Object.assign([], data.content);
-                let file_nodes: ApplicationFileNode[] = [];
-                for (let node of nodes) {
+                const nodes: ApplicationFileNode[] = Object.assign([], data.content);
+                const file_nodes: ApplicationFileNode[] = [];
+                for (const node of nodes) {
                     if (typeof (node.children) !== 'boolean') {
-                        for (let child of node.children) {
+                        for (const child of node.children) {
                             console.log(child);
                             if (child.type === 'folder' && recursion === true) {
                                 this.dir_app(inst, child.id, true)
@@ -319,14 +319,14 @@ export class WSClient extends events.EventEmitter {
     }
     public download_file(inst: string, filepath: string): Thenable<string>  {
         this.appendOutput(`Download Application File ${inst} ${filepath}`);
-        let qs = {
+        const qs = {
             app: inst,
             operation: 'get_content',
             id: filepath
         };
         return this.ws_con.editor_get(qs).then((msg) => {
             return new Promise((c, e) => {
-                let data = msg.data;
+                const data = msg.data;
                 if (data.result !== true) {
                     this.appendOutput(`Download Application file error: ${data.message}`);
                     return e(`Download application file failed! ${data.message}`);
@@ -336,7 +336,7 @@ export class WSClient extends events.EventEmitter {
                         type: string;
                         content: string;
                     }
-                    let fc: FileContent = Object.assign({}, data.content);
+                    const fc: FileContent = Object.assign({}, data.content);
                     this.appendOutput(`File ${filepath} downloaded`);
                     return c(fc.content);
                 } else {
@@ -348,7 +348,7 @@ export class WSClient extends events.EventEmitter {
     }
     public upload_file(inst: string, filepath: string, content: string) : Thenable<boolean> {
         this.appendOutput(`Upload Application File ${inst} ${filepath}`);
-        let form = {
+        const form = {
             app: inst,
             operation: 'set_content_ex',
             id: filepath,
@@ -359,7 +359,7 @@ export class WSClient extends events.EventEmitter {
 
     public rename(inst: string, path: string, new_basename: string): Thenable<boolean> {
         this.appendOutput(`Rename name from ${path} to ${new_basename} under app ${inst}`);
-        let qs = {
+        const qs = {
             app: inst,
             operation: 'rename_node',
             id: path,
@@ -370,7 +370,7 @@ export class WSClient extends events.EventEmitter {
 
     public delete(inst: string, path: string): Thenable<boolean> {
         this.appendOutput(`Delete node ${path} under app ${inst}`);
-        let qs = {
+        const qs = {
             app: inst,
             operation: 'delete_node',
             id: path
@@ -380,7 +380,7 @@ export class WSClient extends events.EventEmitter {
 
     public create_directory(inst: string, path: string): Thenable<boolean> {
         this.appendOutput(`Create directory ${path} under app ${inst}`);
-        let qs = {
+        const qs = {
             app: inst,
             operation: 'create_node',
             id: path,
@@ -388,12 +388,12 @@ export class WSClient extends events.EventEmitter {
         };
         return this.ws_con.editor_get(qs).then( msg => msg.data.result );
     }
-    
+
     public create_file(inst: string, path: string) : Thenable<boolean> {
-        let folder = dirname(path);
-        let filename = basename(path);
+        const folder = dirname(path);
+        const filename = basename(path);
         this.appendOutput(`Create file ${path} under app ${inst}`);
-        let qs = {
+        const qs = {
             app: inst,
             operation: 'create_node',
             id: folder,
@@ -408,19 +408,19 @@ export class WSClient extends events.EventEmitter {
             path = "/";
         }
         this.appendOutput(`Stat path ${path} under app ${inst}`);
-        let qs = {
+        const qs = {
             app: inst,
             operation: 'stat_node',
             id: path
         };
         return this.ws_con.editor_get(qs).then((msg) => {
             return new Promise((c, e) => {
-                let data = msg.data;
+                const data = msg.data;
                 interface LocalFileStat {
                     id: string;
                     stat: IOTFileStat;
                 }
-                let stat: LocalFileStat = Object.assign({}, data.content);
+                const stat: LocalFileStat = Object.assign({}, data.content);
                 if (!stat.stat || !stat.stat.mode) {
                     return e(`Stat path ${path} under app ${inst} failed!`);
                 }
@@ -433,7 +433,7 @@ export class WSClient extends events.EventEmitter {
     public dispose(): Thenable<void> {
         this.disconnect();
 
-        let promise: Thenable<void> = Promise.resolve();
+        const promise: Thenable<void> = Promise.resolve();
         return promise.then(() => {
             this.disposables.forEach((d) => d.dispose());
             this.disposables = [];

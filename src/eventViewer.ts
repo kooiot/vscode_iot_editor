@@ -160,7 +160,7 @@ export class IOTEventViewer {
 		vscode.commands.registerCommand('IOTEventViewer.refresh', (resource?: any) => this.treeDataProvider.refresh(resource));
 		vscode.commands.registerCommand('IOTEventViewer.openFile', resource => this.openResource(resource));
 		vscode.commands.registerCommand('IOTEventViewer.revealResource', () => this.reveal());
-		
+
 		vscode.commands.registerCommand('IOTEventViewer.reload', (node) => this.treeDataProvider.reload(node));
 	}
 

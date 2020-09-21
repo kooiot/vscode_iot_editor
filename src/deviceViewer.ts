@@ -51,7 +51,7 @@ export class DeviceTreeModel {
 			});
 		});
 	}
-	
+
 	public getInfo(uri: vscode.Uri) {
 		if (uri.scheme === 'freeioe') {
 			return this.getDeviceInfo(uri);
@@ -81,7 +81,7 @@ export class DeviceTreeModel {
 		if (!node.device) {
 			return [];
 		}
-		
+
 		return this.mgr.getClient(node.resource).then(client => {
 			return client.list_apps().then((list) => {
 				return new Promise((c, e) => {
@@ -295,7 +295,7 @@ export class DeviceTreeDataProvider implements vscode.TreeDataProvider<DeviceNod
 	public getParent(element: DeviceNode): DeviceNode | undefined {
 		return undefined;
     }
-    
+
 	public provideTextDocumentContent(uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> {
 		return this.model.getInfo(uri).then(obj => JSON.stringify(obj, null, 4));
     }
@@ -314,14 +314,14 @@ export class IOTDeviceViewer {
 		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('freeioe', this.treeDataProvider));
 		context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('freeioe_app', this.treeDataProvider));
 		this.iotViewer = vscode.window.createTreeView('IOTDeviceViewer', { treeDataProvider: this.treeDataProvider });
-		
+
 		client_mgr.DeviceStatusChanged( client => this.treeDataProvider.refresh(client.DeviceUri));
 
 		vscode.commands.registerCommand('IOTDeviceViewer.refresh', (resource?: any) => this.treeDataProvider.refresh(resource));
 		vscode.commands.registerCommand('IOTDeviceViewer.openFile', resource => this.openResource(resource));
 		vscode.commands.registerCommand('IOTDeviceViewer.revealResource', () => this.reveal());
 		vscode.commands.registerCommand('IOTDeviceViewer.settings', () => this.settings());
-		
+
 		vscode.commands.registerCommand('IOTDeviceViewer.reload', (device_node) => this.treeDataProvider.reload(device_node));
 		vscode.commands.registerCommand('IOTDeviceViewer.connect', (device_node) => this.treeModel.connect(device_node));
 		vscode.commands.registerCommand('IOTDeviceViewer.disconnect', (device_node) => this.treeModel.disconnect(device_node));

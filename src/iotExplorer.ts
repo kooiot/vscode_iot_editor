@@ -28,15 +28,15 @@ export class FsModel {
 	public getChildren(node: IOTNode): Thenable<IOTNode[]> {
 		return this.mgr.getClient(node.resource).then(client => {
 			if (node.app && node.app.length > 0) {
-				let uri = node.resource.scheme + "://" + node.resource.authority + "/" + node.app;
-				let nn = this.parse_uri(node.resource);
+				const uri = node.resource.scheme + "://" + node.resource.authority + "/" + node.app;
+				const nn = this.parse_uri(node.resource);
 				return client.dir_app(node.app, nn.path, false).then((list: freeioe_client.ApplicationFileNode[]) => {
 					return new Promise((c, e) => {
 						return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${uri}/${entry.id}`), app: node.app, isDirectory: entry.children !== false }))));
 					});
 				});
 			} else {
-				let uri = node.resource.scheme + "://" + node.resource.authority + "/";
+				const uri = node.resource.scheme + "://" + node.resource.authority + "/";
 				return client.list_apps().then( (list: freeioe_client.Application[]) => {
 					return new Promise((c, e) => {
 						return c(this.sort(list.map(entry => ({ resource: vscode.Uri.parse(`${uri}/${entry.inst}`), app: entry.inst, isDirectory: true }))));
@@ -60,8 +60,8 @@ export class FsModel {
 		});
 	}
 	public parse_uri(resource: vscode.Uri) : IOTUriNode {
-		let path = resource.path.substr(1);
-		let app = path.split('/')[0];
+		const path = resource.path.substr(1);
+		const app = path.split('/')[0];
 		return {app: app, path: path.substr(app.length)};
 	}
 
@@ -74,22 +74,22 @@ export class FsModel {
 
 	public getContent(resource: vscode.Uri): Thenable<string> {
 		return this.mgr.getClient(resource).then(client => {
-			let node = this.parse_uri(resource);
+			const node = this.parse_uri(resource);
 			return client.download_file(node.app, node.path);
 		});
 	}
 
 	public setContent(resource: vscode.Uri, content: string) : Thenable<boolean> {
 		return this.mgr.getClient(resource).then(client => {
-			let node = this.parse_uri(resource);
+			const node = this.parse_uri(resource);
 			return client.upload_file(node.app, node.path, content);
 		});
 	}
 
 	public renameNode(oldUri: vscode.Uri, newUri: vscode.Uri): Thenable<boolean> {
 		return this.mgr.getClient(oldUri).then(client => {
-			let oldNode = this.parse_uri(oldUri);
-			let newNode = this.parse_uri(newUri);
+			const oldNode = this.parse_uri(oldUri);
+			const newNode = this.parse_uri(newUri);
 			if (oldNode.app !== newNode.app) {
 				console.log('Cannot move node between applications');
 				return Promise.resolve(false);
@@ -107,14 +107,14 @@ export class FsModel {
 
 	public deleteNode(resource: vscode.Uri) : Thenable<boolean> {
 		return this.mgr.getClient(resource).then(client => {
-			let node = this.parse_uri(resource);
+			const node = this.parse_uri(resource);
 			return client.delete(node.app, node.path);
 		});
 	}
 
 	public createNode(resource: vscode.Uri, type: string) : Thenable<boolean> {
 		return this.mgr.getClient(resource).then(client => {
-			let node = this.parse_uri(resource);
+			const node = this.parse_uri(resource);
 			if (type === 'file') {
 				return client.create_file(node.app, node.path);
 			}
@@ -127,14 +127,14 @@ export class FsModel {
 
 	public statNode(resource: vscode.Uri) : Thenable<freeioe_client.IOTFileStat> {
 		return this.mgr.getClient(resource).then(client => {
-			let node = this.parse_uri(resource);
+			const node = this.parse_uri(resource);
 			return client.stat(node.app, node.path);
 		});
 	}
 
 	public dirNode(resource: vscode.Uri) : Thenable<IOTNode[]> {
-		let uri_node = this.parse_uri(resource);
-		let node: IOTNode = Object.assign({}, {
+		const uri_node = this.parse_uri(resource);
+		const node: IOTNode = Object.assign({}, {
 			resource: resource,
 			app: uri_node.app,
 			isDirectory: true
@@ -143,32 +143,32 @@ export class FsModel {
 	}
 
 	public applicationStart(item: IOTNode | vscode.Uri) : Thenable<void> {
-		let uri = (item instanceof vscode.Uri) ? item : item.resource;
-		let node = this.parse_uri(uri);
+		const uri = (item instanceof vscode.Uri) ? item : item.resource;
+		const node = this.parse_uri(uri);
 		return this.mgr.startApplication(uri, node.app);
 	}
-	
+
 	public applicationStop(item: IOTNode | vscode.Uri) : Thenable<void> {
-		let uri = (item instanceof vscode.Uri) ? item : item.resource;
-		let node = this.parse_uri(uri);
+		const uri = (item instanceof vscode.Uri) ? item : item.resource;
+		const node = this.parse_uri(uri);
 		return this.mgr.stopApplication(uri, node.app, 'Stop from IOTExplorer');
 	}
-	
+
 	public applicationRestart(item: IOTNode | vscode.Uri) : Thenable<void> {
-		let uri = (item instanceof vscode.Uri) ? item : item.resource;
-		let node = this.parse_uri(uri);
+		const uri = (item instanceof vscode.Uri) ? item : item.resource;
+		const node = this.parse_uri(uri);
 		return this.mgr.restartApplication(uri, node.app, 'Restart from IOTExplorer');
 	}
-	
+
 	public applicationConfig(item: IOTNode | vscode.Uri) : Thenable<void> {
-		let uri = (item instanceof vscode.Uri) ? item : item.resource;
-		let node = this.parse_uri(uri);
+		const uri = (item instanceof vscode.Uri) ? item : item.resource;
+		const node = this.parse_uri(uri);
 		return this.mgr.configApplication(uri, node.app);
 	}
-	
+
 	public applicationDownload(item: IOTNode | vscode.Uri) : Thenable<void> {
-		let uri = (item instanceof vscode.Uri) ? item : item.resource;
-		let node = this.parse_uri(uri);
+		const uri = (item instanceof vscode.Uri) ? item : item.resource;
+		const node = this.parse_uri(uri);
 		return this.mgr.downloadApplication(uri, node.app, undefined).then( (content) => {
 			vscode.window.showSaveDialog({saveLabel: 'Application Package File Save To..', filters : {
 				'FreeIOE Application Package': ['zip', 'ZIP']}}).then( (file_uri) => {
@@ -185,9 +185,9 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 
 	constructor(context: vscode.ExtensionContext, client_mgr: client.ClientMgr) { 
 		this.model = new FsModel(client_mgr, 'ioe');
-		
+
 		client_mgr.DeviceStatusChanged( client => this.try_reload_file(client.FsUri));
-		
+
 		vscode.commands.registerCommand('IOTExplorer.reload', (resource: vscode.Uri) => this.try_reload_file(resource));
 		vscode.commands.registerCommand('IOTExplorer.applicationStart', (resource: vscode.Uri) => this.model.applicationStart(resource));
 		vscode.commands.registerCommand('IOTExplorer.applicationStop', (resource: vscode.Uri) => this.model.applicationStop(resource));
@@ -223,7 +223,7 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 		}
 		return this.model.statNode(uri).then((stat: freeioe_client.IOTFileStat) => {
 			return new Promise((c, e) => {
-				let fs: vscode.FileStat = Object.assign({});
+				const fs: vscode.FileStat = Object.assign({});
 				fs.size = stat.size;
 				if (stat.mode === 'file') {
 					fs.type = vscode.FileType.File;
@@ -253,7 +253,7 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 		}
 		return this.model.dirNode(uri).then((nodes: IOTNode[]) => {
 			return new Promise((c, e) => {
-				let result: [string, vscode.FileType][] = [];
+				const result: [string, vscode.FileType][] = [];
 				for (const node of nodes) {
 					result.push([basename(node.resource.fsPath), node.isDirectory ? vscode.FileType.Directory : vscode.FileType.File]);
 				}
@@ -324,7 +324,7 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 			throw vscode.FileSystemError.NoPermissions();
 		}
 		this.model.valid_beta(uri).then(() => {
-			let folder = uri.with({ path: dirname(uri.path) });
+			const folder = uri.with({ path: dirname(uri.path) });
 			this.model.deleteNode(uri).then((result: boolean) => {
 				if (result) {
 					this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { uri, type: vscode.FileChangeType.Deleted });
@@ -343,7 +343,7 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 			throw vscode.FileSystemError.NoPermissions();
 		}
 		this.model.valid_beta(uri).then(() => {
-			let folder = uri.with({ path: dirname(uri.path) });
+			const folder = uri.with({ path: dirname(uri.path) });
 			this.model.createNode(uri, 'directory').then((result: boolean) => {
 				if (result) {
 					this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { type: vscode.FileChangeType.Created, uri });
@@ -362,7 +362,7 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 			throw vscode.FileSystemError.NoPermissions();
 		}
 		this.model.valid_beta(uri).then(() => {
-			let folder = uri.with({ path: dirname(uri.path) });
+			const folder = uri.with({ path: dirname(uri.path) });
 			this.model.createNode(uri, 'file').then((result: boolean) => {
 				if (result) {
 					this._fireSoon({ type: vscode.FileChangeType.Changed, uri: folder }, { type: vscode.FileChangeType.Created, uri });
@@ -384,7 +384,9 @@ export class IOTFileSystemProvider implements vscode.FileSystemProvider {
 
     watch(resource: vscode.Uri, options: { recursive: boolean; excludes: string[] }): vscode.Disposable {
         // ignore, fires for all changes...
-        return new vscode.Disposable(() => { });
+		return new vscode.Disposable(() => {
+			//
+		});
     }
 
     private _fireSoon(...events: vscode.FileChangeEvent[]): void {

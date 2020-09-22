@@ -15,7 +15,7 @@ const defaultSettings = `{
     "auth_code": "123456789",
     "devices": [
         {
-            "name": "ThingsLink,
+            "name": "ThingsLink",
             "desc": "Login to device by username and password",
             "host": "192.168.1.248",
             "port": 8818,
@@ -24,7 +24,7 @@ const defaultSettings = `{
             "password": "admin1"
         },
         {
-            "name": "ThingsLink",
+            "name": "ThingsLink (cloud auth)",
             "desc": "Login to device by ThingsCloud access key",
             "host": "192.168.1.248",
             "port": 8818,
@@ -189,8 +189,16 @@ export class EditorProperties {
                             this.resetToDefaultSettings(true);
                         }
 
+                        edit.insert(document.uri, new vscode.Position(0, 0), JSON.stringify(this.configurationJson, null, 4));
+
                         vscode.workspace.applyEdit(edit).then((status) => {
-                            onSuccess(document);
+                            document.save().then(() => {
+                                this.propertiesFile = vscode.Uri.file(path.join(this.configFolder, "freeioe_devices.json"));
+                                vscode.workspace.openTextDocument(this.propertiesFile).then((document: vscode.TextDocument) => {
+                                    onSuccess(document);
+                                });
+                            });
+                            // onSuccess(document);
                         });
                     });
                 }

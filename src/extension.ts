@@ -41,9 +41,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.disconnect', deviceDisconnect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.defaultDeviceSelect', defaultDeviceSelect));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.init', configurationEdit));
+    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.workspaceInit', configurationEdit));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.configurationEdit', configurationEdit));
     context.subscriptions.push(vscode.commands.registerCommand('iot_editor.applicationCreate', applicationCreate));
-    context.subscriptions.push(vscode.commands.registerCommand('iot_editor.workspaceInit', configurationEdit));
 
     client = new ClientMgr(vscode.workspace.rootPath);
     iotDeviceViewer = new IOTDeviceViewer(context, client);
